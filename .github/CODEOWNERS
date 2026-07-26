@@ -1,0 +1,7 @@
+# Default owner for everything.
+* @JaredLauZilek
+
+# Review-critical paths — schema and protocol handling. Trivial while solo,
+# but marks where a second engineer's changes always need Jared's eyes.
+/supabase/migrations/ @JaredLauZilek
+/apps/ocpp-gateway/src/ocpp/ @JaredLauZilek

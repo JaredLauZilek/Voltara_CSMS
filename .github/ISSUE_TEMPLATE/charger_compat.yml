@@ -1,0 +1,40 @@
+name: Charger compatibility report
+description: A charger misbehaves against the gateway — intake for the vendor-quirks layer.
+title: '[compat] <vendor> <model>: <symptom>'
+labels: [charger-compat]
+body:
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor (as reported in BootNotification)
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model (as reported in BootNotification)
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware version
+  - type: dropdown
+    id: ocpp
+    attributes:
+      label: OCPP version
+      options: ['1.6J', '2.0.1', 'other']
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: frames
+    attributes:
+      label: Relevant ocpp_messages excerpt
+      description: Paste the raw frames around the failure (redact AuthorizationKey values).
+      render: json

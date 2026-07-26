@@ -1,0 +1,32 @@
+# Fly.io staging config for the OCPP gateway. Deploy from the repo root:
+#   flyctl deploy -c infra/fly.staging.toml --remote-only
+# Region sin = same neighbourhood as Supabase ap-southeast-1 (Singapore).
+# An always-on machine is non-negotiable: chargers hold their WebSocket open
+# for days and a scaled-to-zero gateway means an offline network.
+
+app = "voltara-gateway-staging"
+primary_region = "sin"
+
+[build]
+  dockerfile = "infra/Dockerfile.gateway"
+
+[env]
+  GATEWAY_HTTP_PORT = "9221"
+
+[http_service]
+  internal_port = 9221
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

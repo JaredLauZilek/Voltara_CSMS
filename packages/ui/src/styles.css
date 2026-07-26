@@ -1,0 +1,114 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+html,
+body,
+#root {
+  height: 100%;
+  font-family: 'Figtree', sans-serif;
+}
+body {
+  background: #f9f9f9;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9px;
+}
+
+button {
+  font-family: inherit;
+}
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Responsive — Galaxy Fold (≤344) · iPhone (≤430) · iPad (≤1024) · desktop
+ * ──────────────────────────────────────────────────────────────────────────
+ * Inline styles dominate the codebase, so most responsive rules below target
+ * inline-style attribute selectors with `!important` rather than asking every
+ * screen to add a class. Touching ~25 screens by hand was the alternative.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* iPad portrait + Galaxy Fold unfolded: KPI rows of 4 fold to 2×2. */
+@media (max-width: 1024px) {
+  [style*='repeat(4, 1fr)'] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  [style*='repeat(3, 1fr)'] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Phone / Fold folded: every KPI/grid layout stacks single-column. */
+@media (max-width: 600px) {
+  [style*='repeat(4, 1fr)'],
+  [style*='repeat(3, 1fr)'],
+  [style*='repeat(2, 1fr)'] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Table cards: most screens wrap a table in a rounded card with
+ * `overflow: hidden`. On narrow viewports the table can't fit so we
+ * unhide the card horizontally and let the table scroll inside it.
+ * :has() ships in every browser engine from 2023 onwards, which covers
+ * iPad / iPhone / Galaxy Fold. */
+@media (max-width: 1024px) {
+  div:has(> table) {
+    overflow-x: auto !important;
+  }
+  div:has(> table) > table {
+    min-width: max-content;
+  }
+}
+
+/* Modal — see Modal.tsx. The component sets its own width; we just shrink
+ * padding and corner radius on small screens so the modal feels native. */
+@media (max-width: 600px) {
+  .voltara-modal-backdrop {
+    padding: 8px !important;
+  }
+  .voltara-modal {
+    width: 100% !important;
+    max-height: calc(100vh - 16px) !important;
+    padding: 18px !important;
+    border-radius: 14px !important;
+  }
+}
+
+/* Main scroll container — shrink the 28px page padding so phones get the
+ * full content width. Targets App.tsx's `<div data-voltara-main>`. */
+@media (max-width: 1024px) {
+  [data-voltara-main] {
+    padding: 20px !important;
+  }
+}
+@media (max-width: 600px) {
+  [data-voltara-main] {
+    padding: 14px !important;
+  }
+}
+
+/* Topbar — tighten the date/title block on phones so the hamburger fits. */
+@media (max-width: 600px) {
+  [data-voltara-header] {
+    padding: 0 14px !important;
+    gap: 10px !important;
+  }
+}

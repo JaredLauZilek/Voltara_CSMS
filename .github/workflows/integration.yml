@@ -1,0 +1,46 @@
+name: integration
+
+on:
+  pull_request:
+    paths:
+      - 'apps/ocpp-gateway/**'
+      - 'packages/shared/**'
+      - 'supabase/**'
+      - 'tests/**'
+      - '.github/workflows/integration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ocpp-gateway/**'
+      - 'packages/shared/**'
+      - 'supabase/**'
+      - 'tests/**'
+  schedule:
+    - cron: '30 19 * * *' # 03:30 MYT nightly
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Boots the local stack and applies all migrations + seed.
+      - run: supabase start
+
+      - name: Run integration suite (RLS isolation; OCPP scenarios from Phase 1)
+        run: pnpm --filter @voltara/integration-tests test
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

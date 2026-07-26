@@ -1,0 +1,29 @@
+# Deploys the OCPP gateway to Fly.io (staging).
+# Disabled until repo variable DEPLOY_ENABLED=true and the staging environment
+# secret FLY_API_TOKEN is configured (deploy-scoped token for the app).
+# Rolling deploys briefly drop charger sockets — chargers reconnect and replay
+# offline transactions by protocol design (see docs/dev-setup.md runbook note).
+
+name: deploy-gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ocpp-gateway/**'
+      - 'packages/shared/**'
+      - 'infra/**'
+      - '.github/workflows/deploy-gateway.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy -c infra/fly.staging.toml --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
