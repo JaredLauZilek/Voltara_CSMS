@@ -26,4 +26,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm exec turbo run lint typecheck test build
+      - run: pnpm exec turbo run lint typecheck build
+
+      # The integration suite needs a live Postgres (supabase start) and runs in
+      # integration.yml instead — here it would always fail with ECONNREFUSED.
+      - run: pnpm exec turbo run test --filter=!@voltara/integration-tests
