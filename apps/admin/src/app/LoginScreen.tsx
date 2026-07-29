@@ -40,7 +40,13 @@ export function LoginScreen() {
     setError(null);
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
-      setError('Invalid email or password.');
+      // Keep the generic message for genuinely wrong credentials (never confirm
+      // whether an email exists), but surface anything else — rate limits,
+      // network failures, misconfigured project URL — verbatim, or the screen
+      // sends you hunting for a typo that isn't there.
+      const isBadCredentials =
+        authError.code === 'invalid_credentials' || authError.status === 400;
+      setError(isBadCredentials ? 'Invalid email or password.' : authError.message);
       setPassword('');
       setBusy(false);
     }
