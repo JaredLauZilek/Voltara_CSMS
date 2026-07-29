@@ -112,3 +112,14 @@ textarea {
     gap: 10px !important;
   }
 }
+
+/* Waiting-for-charger indicator (charge-points onboarding). */
+@keyframes voltara-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}

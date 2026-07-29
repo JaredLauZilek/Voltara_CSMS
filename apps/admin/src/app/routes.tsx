@@ -5,8 +5,9 @@
 
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Zap } from 'lucide-react';
 import { LocationsScreen } from '@/features/locations';
+import { ChargePointsScreen } from '@/features/charge-points';
 
 export interface RouteDef {
   path: string;
@@ -15,6 +16,7 @@ export interface RouteDef {
 }
 
 export const ROUTES: RouteDef[] = [
+  { path: '/charge-points', title: 'Chargers', screen: ChargePointsScreen },
   { path: '/locations', title: 'Locations', screen: LocationsScreen },
 ];
 
@@ -32,7 +34,10 @@ export interface NavSection {
 export const NAV_SECTIONS: NavSection[] = [
   {
     label: 'Network',
-    items: [{ path: '/locations', label: 'Locations', icon: MapPin }],
+    items: [
+      { path: '/charge-points', label: 'Chargers', icon: Zap },
+      { path: '/locations', label: 'Locations', icon: MapPin },
+    ],
   },
 ];
 

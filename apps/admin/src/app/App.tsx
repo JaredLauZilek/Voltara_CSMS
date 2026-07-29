@@ -374,7 +374,7 @@ export function App() {
 
         <div data-voltara-main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
           <Routes>
-            <Route path="/" element={<Navigate to="/locations" replace />} />
+            <Route path="/" element={<Navigate to="/charge-points" replace />} />
             {ROUTES.map((r) => (
               <Route key={r.path} path={`${r.path}/*`} element={<r.screen />} />
             ))}

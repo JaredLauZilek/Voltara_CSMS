@@ -1102,6 +1102,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      register_charge_point: {
+        Args: {
+          p_connector_count?: number
+          p_connector_type?: string
+          p_location_id?: string
+          p_max_kw?: number
+          p_name: string
+          p_ocpp_identity?: string
+        }
+        Returns: {
+          auth_key: string
+          charge_point_id: string
+          ocpp_identity: string
+        }[]
+      }
       rollup_meter_values: { Args: { p_since?: string }; Returns: undefined }
       sweep_orphaned_sessions: {
         Args: { p_stale_after?: string }
