@@ -26,6 +26,10 @@ Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, pl
 | `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                     |
 | `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                          |
 | `pnpm exec supabase migration new <topic>`   | new migration file                                                                  |
+| `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
+
+To put a **real charger** on the platform, see [deploy-gateway.md](deploy-gateway.md) —
+it covers the Fly.io deploy, the charger's settings, and how to confirm it connected.
 
 ## Deploys (once enabled)
 

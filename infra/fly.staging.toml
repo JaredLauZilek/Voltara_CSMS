@@ -1,8 +1,13 @@
 # Fly.io staging config for the OCPP gateway. Deploy from the repo root:
 #   flyctl deploy -c infra/fly.staging.toml --remote-only
-# Region sin = same neighbourhood as Supabase ap-southeast-1 (Singapore).
-# An always-on machine is non-negotiable: chargers hold their WebSocket open
-# for days and a scaled-to-zero gateway means an offline network.
+#
+# Region sin = same neighbourhood as Supabase ap-southeast-1 (Singapore), which
+# is also the closest region to Malaysia. Every charger message is a database
+# write, so the gateway and the database must not be on different continents.
+#
+# Runtime secrets are NOT here — set them with `flyctl secrets set`:
+#   DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# See docs/deploy-gateway.md.
 
 app = "voltara-gateway-staging"
 primary_region = "sin"
@@ -11,11 +16,18 @@ primary_region = "sin"
   dockerfile = "infra/Dockerfile.gateway"
 
 [env]
-  GATEWAY_HTTP_PORT = "9221"
+  GATEWAY_PORT = "9221"
+  LOG_LEVEL = "info"
+  # Off only to debug a specific non-conforming charger; see the quirks layer.
+  OCPP_STRICT_MODE = "true"
 
 [http_service]
   internal_port = 9221
+  # Chargers must use wss://. Plain ws:// gets redirected, which is the correct
+  # outcome: Security Profile 2 is the floor (CLAUDE.md §10).
   force_https = true
+  # Never scale to zero. A charger holds one WebSocket open for days; a
+  # sleeping gateway is an offline charging network.
   auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
@@ -23,7 +35,7 @@ primary_region = "sin"
   [[http_service.checks]]
     interval = "30s"
     timeout = "5s"
-    grace_period = "10s"
+    grace_period = "20s"
     method = "GET"
     path = "/healthz"
 
