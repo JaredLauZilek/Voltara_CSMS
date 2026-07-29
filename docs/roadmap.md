@@ -13,7 +13,9 @@ The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../
 - [ ] **Phase 6 — White-label, onboarding, RBAC depth, platform ops** (~3 wk)
 - [ ] **Phase 7+ — Advanced** (smart charging/DLM, OCPP 2.0.1, OCPI, fleet, MEVnet)
 
-**Pending one-time manual steps:** create staging Supabase project (Singapore) + enable the custom-access-token auth hook (checklist in [dev-setup.md](dev-setup.md)) · create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to deploy.
+**Staging Supabase:** project `lxsfnqshcacsrolmymsg`, region `ap-southeast-1` (Singapore). All migrations applied, Voltara tenant bootstrapped, JWT claims hook enabled and verified. CI + integration workflows green on `main`.
+
+**Pending one-time manual steps:** create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to auto-deploy · on upgrade to Supabase Pro, enable leaked-password protection (Free-plan gated) · first Fly.io deploy of the gateway is deferred to Phase 1, when there is a real OCPP server worth deploying.
 
 ---
 
