@@ -10,8 +10,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
+    "ocpp-rpc": "^2.2.1",
     "postgres": "^3.4.4",
     "typescript": "~5.5.3",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "@voltara/ocpp-gateway": "workspace:*"
   }
 }

@@ -133,9 +133,15 @@ describe('cross-tenant isolation on locations', () => {
 });
 
 describe('cross-tenant isolation on charge_points and id_tags', () => {
-  it('tenant B cannot see tenant A charge points', async () => {
-    const rows = await as(personaB, (tx) => tx`select id from public.charge_points`);
-    expect(rows.length).toBe(0); // only Voltara has a seeded charge point
+  it('tenant B sees only its own charge points', async () => {
+    const rows = await as(
+      personaB,
+      (tx) => tx`select tenant_id, ocpp_identity from public.charge_points`,
+    );
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.tenant_id === TENANT_B)).toBe(true);
+    // Tenant A's chargers exist in the same table and must stay invisible.
+    expect(rows.some((r) => r.ocpp_identity === 'VCP-DEMO-001')).toBe(false);
   });
 
   it('tenant B cannot see tenant A id tags', async () => {

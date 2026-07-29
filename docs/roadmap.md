@@ -5,7 +5,7 @@ The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../
 ## Phase tracker
 
 - [x] **Phase 0 — Scaffold, CI, Supabase, tenancy, UI port** · done 26 Jul 2026 (`8cc4d36`)
-- [ ] **Phase 1 — OCPP gateway core vs simulator** (~3 wk)
+- [x] **Phase 1 — OCPP gateway core vs simulator** · done 29 Jul 2026 — 8 charge-point handlers, Security Profile 2 auth, raw frame log with credential redaction, session state machine, batched telemetry with monthly partitions, LISTEN/NOTIFY command bus, quirks layer, 25 scripted-charger scenarios (40 integration tests green)
 - [ ] **Phase 2 — Admin portal charger management** (~3 wk)
 - [ ] **Phase 3 — Tariffs, billing math, CDRs, reports** (~2–3 wk)
 - [ ] **Phase 4 — Driver app MVP (Expo)** (~4–6 wk)

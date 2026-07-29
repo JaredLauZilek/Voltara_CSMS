@@ -1,58 +1,50 @@
-// Voltara CSMS — OCPP gateway.
-// Phase 0: health endpoints + logging + graceful shutdown only. Phase 1 adds
-// the ocpp-rpc WebSocket server on this same HTTP server (upgrade on
-// /ocpp/{identity}), the connection registry, and the command bus.
+// Voltara CSMS — OCPP gateway process entry point.
+//
+// The gateway is the only writer of charger runtime state and the only
+// component that talks to chargers. Assembly lives in gateway.ts; this file is
+// just the process wrapper: start it, and shut it down cleanly when Fly sends
+// a signal during a deploy.
 
-import { createServer } from 'node:http';
-import { pino } from 'pino';
+import { createGateway } from './gateway.js';
 
-const logger = pino({
-  name: 'ocpp-gateway',
-  level: process.env.LOG_LEVEL ?? 'info',
-});
+const gateway = createGateway();
 
-const HTTP_PORT = Number(process.env.GATEWAY_HTTP_PORT ?? 9221);
-const startedAt = Date.now();
+try {
+  await gateway.start();
+} catch (err) {
+  // Written to stderr directly: config or the database connection is the usual
+  // cause, and the logger may be the very thing that failed to construct.
+  console.error('gateway failed to start', err);
+  process.exit(1);
+}
 
-const server = createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/healthz') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        ok: true,
-        service: 'ocpp-gateway',
-        uptimeS: Math.round((Date.now() - startedAt) / 1000),
-      }),
-    );
-    return;
-  }
-  if (req.method === 'GET' && req.url === '/statusz') {
-    res.writeHead(200, { 'content-type': 'application/json' });
-    res.end(
-      JSON.stringify({
-        ok: true,
-        phase: 'phase-0',
-        connections: 0,
-        node: process.version,
-      }),
-    );
-    return;
-  }
-  res.writeHead(404, { 'content-type': 'application/json' });
-  res.end(JSON.stringify({ ok: false, error: 'not_found' }));
-});
+let shuttingDown = false;
 
-server.listen(HTTP_PORT, () => {
-  logger.info({ port: HTTP_PORT }, 'gateway http listening');
-});
+function shutdown(signal: string): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  gateway.logger.info({ signal }, 'shutdown signal received');
 
-// Fly sends SIGINT/SIGTERM on deploys; close the listener so in-flight
-// requests finish. Phase 1 extends this to drain charger sockets cleanly.
-function shutdown(signal: string) {
-  logger.info({ signal }, 'shutting down');
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 5000).unref();
+  // Chargers reconnect on their own and queue transactions while away, so a
+  // brisk exit is safer than hanging on to sockets during a deploy.
+  const force = setTimeout(() => {
+    gateway.logger.error('shutdown timed out, exiting anyway');
+    process.exit(1);
+  }, 10_000);
+  force.unref();
+
+  void gateway
+    .stop()
+    .then(() => process.exit(0))
+    .catch((err: unknown) => {
+      gateway.logger.error({ err }, 'shutdown failed');
+      process.exit(1);
+    });
 }
 
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('unhandledRejection', (err) => {
+  gateway.logger.error({ err }, 'unhandled rejection');
+});

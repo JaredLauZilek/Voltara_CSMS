@@ -12,8 +12,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "@voltara/shared": "workspace:*",
-    "pino": "^9.4.0"
+    "ocpp-rpc": "^2.2.1",
+    "pino": "^9.4.0",
+    "postgres": "^3.4.9",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
@@ -22,5 +26,10 @@
     "tsx": "^4.22.0",
     "typescript": "~5.5.3",
     "vitest": "^3.0.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./gateway": "./src/gateway.ts",
+    "./config": "./src/config.ts"
   }
 }

@@ -81,6 +81,99 @@ export type Database = {
           },
         ]
       }
+      charge_point_connection_log: {
+        Row: {
+          charge_point_id: string
+          close_code: number | null
+          close_reason: string | null
+          event: string
+          gateway_instance: string | null
+          id: number
+          recorded_at: string
+          remote_address: string | null
+          tenant_id: string
+        }
+        Insert: {
+          charge_point_id: string
+          close_code?: number | null
+          close_reason?: string | null
+          event: string
+          gateway_instance?: string | null
+          id?: never
+          recorded_at?: string
+          remote_address?: string | null
+          tenant_id: string
+        }
+        Update: {
+          charge_point_id?: string
+          close_code?: number | null
+          close_reason?: string | null
+          event?: string
+          gateway_instance?: string | null
+          id?: never
+          recorded_at?: string
+          remote_address?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_point_connection_log_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_point_connection_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charge_point_connections: {
+        Row: {
+          charge_point_id: string
+          connected_at: string
+          gateway_instance: string
+          last_message_at: string | null
+          ocpp_identity: string
+          tenant_id: string
+        }
+        Insert: {
+          charge_point_id: string
+          connected_at?: string
+          gateway_instance: string
+          last_message_at?: string | null
+          ocpp_identity: string
+          tenant_id: string
+        }
+        Update: {
+          charge_point_id?: string
+          connected_at?: string
+          gateway_instance?: string
+          last_message_at?: string | null
+          ocpp_identity?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_point_connections_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_point_connections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charge_point_models: {
         Row: {
           connector_count: number
@@ -118,6 +211,60 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "charge_point_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charge_point_status_log: {
+        Row: {
+          charge_point_id: string
+          error_code: string | null
+          id: number
+          info: string | null
+          ocpp_connector_id: number
+          recorded_at: string
+          status: string
+          tenant_id: string
+          vendor_error_code: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          charge_point_id: string
+          error_code?: string | null
+          id?: never
+          info?: string | null
+          ocpp_connector_id: number
+          recorded_at?: string
+          status: string
+          tenant_id: string
+          vendor_error_code?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          charge_point_id?: string
+          error_code?: string | null
+          id?: never
+          info?: string | null
+          ocpp_connector_id?: number
+          recorded_at?: string
+          status?: string
+          tenant_id?: string
+          vendor_error_code?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_point_status_log_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charge_point_status_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -233,6 +380,129 @@ export type Database = {
           },
           {
             foreignKeyName: "charge_points_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charging_sessions: {
+        Row: {
+          amount_gross: number | null
+          amount_tax: number | null
+          charge_point_id: string
+          connector_id: string | null
+          created_at: string
+          currency: string | null
+          ended_at: string | null
+          energy_wh: number | null
+          evse_id: string | null
+          id: string
+          id_tag: string | null
+          id_tag_id: string | null
+          meter_start_wh: number | null
+          meter_stop_wh: number | null
+          ocpp_connector_id: number
+          ocpp_transaction_id: number
+          offline: boolean
+          reservation_id: number | null
+          start_source: string
+          started_at: string
+          status: string
+          stop_id_tag: string | null
+          stop_reason: string | null
+          tariff_snapshot: Json | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_gross?: number | null
+          amount_tax?: number | null
+          charge_point_id: string
+          connector_id?: string | null
+          created_at?: string
+          currency?: string | null
+          ended_at?: string | null
+          energy_wh?: number | null
+          evse_id?: string | null
+          id?: string
+          id_tag?: string | null
+          id_tag_id?: string | null
+          meter_start_wh?: number | null
+          meter_stop_wh?: number | null
+          ocpp_connector_id: number
+          ocpp_transaction_id: number
+          offline?: boolean
+          reservation_id?: number | null
+          start_source?: string
+          started_at: string
+          status?: string
+          stop_id_tag?: string | null
+          stop_reason?: string | null
+          tariff_snapshot?: Json | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_gross?: number | null
+          amount_tax?: number | null
+          charge_point_id?: string
+          connector_id?: string | null
+          created_at?: string
+          currency?: string | null
+          ended_at?: string | null
+          energy_wh?: number | null
+          evse_id?: string | null
+          id?: string
+          id_tag?: string | null
+          id_tag_id?: string | null
+          meter_start_wh?: number | null
+          meter_stop_wh?: number | null
+          ocpp_connector_id?: number
+          ocpp_transaction_id?: number
+          offline?: boolean
+          reservation_id?: number | null
+          start_source?: string
+          started_at?: string
+          status?: string
+          stop_id_tag?: string | null
+          stop_reason?: string | null
+          tariff_snapshot?: Json | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charging_sessions_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charging_sessions_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charging_sessions_evse_id_fkey"
+            columns: ["evse_id"]
+            isOneToOne: false
+            referencedRelation: "evses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charging_sessions_id_tag_id_fkey"
+            columns: ["id_tag_id"]
+            isOneToOne: false
+            referencedRelation: "id_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charging_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -481,6 +751,105 @@ export type Database = {
           },
         ]
       }
+      meter_values: {
+        Row: {
+          charge_point_id: string
+          charging_session_id: string | null
+          context: string | null
+          format: string | null
+          id: number
+          location: string | null
+          measurand: string
+          ocpp_connector_id: number
+          phase: string | null
+          sampled_at: string
+          tenant_id: string
+          unit: string | null
+          value: number
+        }
+        Insert: {
+          charge_point_id: string
+          charging_session_id?: string | null
+          context?: string | null
+          format?: string | null
+          id?: never
+          location?: string | null
+          measurand?: string
+          ocpp_connector_id: number
+          phase?: string | null
+          sampled_at: string
+          tenant_id: string
+          unit?: string | null
+          value: number
+        }
+        Update: {
+          charge_point_id?: string
+          charging_session_id?: string | null
+          context?: string | null
+          format?: string | null
+          id?: never
+          location?: string | null
+          measurand?: string
+          ocpp_connector_id?: number
+          phase?: string | null
+          sampled_at?: string
+          tenant_id?: string
+          unit?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
+      meter_values_agg_1m: {
+        Row: {
+          avg_power_w: number | null
+          charge_point_id: string
+          charging_session_id: string
+          energy_wh: number | null
+          max_power_w: number | null
+          minute: string
+          ocpp_connector_id: number
+          soc_percent: number | null
+          tenant_id: string
+        }
+        Insert: {
+          avg_power_w?: number | null
+          charge_point_id: string
+          charging_session_id: string
+          energy_wh?: number | null
+          max_power_w?: number | null
+          minute: string
+          ocpp_connector_id: number
+          soc_percent?: number | null
+          tenant_id: string
+        }
+        Update: {
+          avg_power_w?: number | null
+          charge_point_id?: string
+          charging_session_id?: string
+          energy_wh?: number | null
+          max_power_w?: number | null
+          minute?: string
+          ocpp_connector_id?: number
+          soc_percent?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meter_values_agg_1m_charging_session_id_fkey"
+            columns: ["charging_session_id"]
+            isOneToOne: false
+            referencedRelation: "charging_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meter_values_agg_1m_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           author_user_id: string | null
@@ -519,6 +888,48 @@ export type Database = {
           },
         ]
       }
+      ocpp_messages: {
+        Row: {
+          action: string | null
+          charge_point_id: string
+          direction: string
+          error_code: string | null
+          error_description: string | null
+          id: number
+          message_type: number
+          ocpp_message_id: string | null
+          payload: Json | null
+          recorded_at: string
+          tenant_id: string
+        }
+        Insert: {
+          action?: string | null
+          charge_point_id: string
+          direction: string
+          error_code?: string | null
+          error_description?: string | null
+          id?: never
+          message_type: number
+          ocpp_message_id?: string | null
+          payload?: Json | null
+          recorded_at?: string
+          tenant_id: string
+        }
+        Update: {
+          action?: string | null
+          charge_point_id?: string
+          direction?: string
+          error_code?: string | null
+          error_description?: string | null
+          id?: never
+          message_type?: number
+          ocpp_message_id?: string | null
+          payload?: Json | null
+          recorded_at?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       platform_admins: {
         Row: {
           created_at: string
@@ -533,6 +944,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      remote_commands: {
+        Row: {
+          action: string
+          charge_point_id: string
+          created_at: string
+          error: string | null
+          id: string
+          payload: Json
+          requested_by: string | null
+          responded_at: string | null
+          response: Json | null
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          charge_point_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json
+          requested_by?: string | null
+          responded_at?: string | null
+          response?: Json | null
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          charge_point_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          payload?: Json
+          requested_by?: string | null
+          responded_at?: string | null
+          response?: Json | null
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_commands_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remote_commands_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_settings: {
         Row: {
@@ -613,12 +1084,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_monthly_partition: {
+        Args: { p_month: string; p_table: string }
+        Returns: undefined
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: never; Returns: boolean }
       is_tenant_operator: { Args: never; Returns: boolean }
       jwt_tenant_id: { Args: never; Returns: string }
       jwt_tenant_role: { Args: never; Returns: string }
+      maintain_partitions: {
+        Args: {
+          p_message_retention_days?: number
+          p_meter_retention_days?: number
+          p_months_ahead?: number
+        }
+        Returns: undefined
+      }
+      rollup_meter_values: { Args: { p_since?: string }; Returns: undefined }
+      sweep_orphaned_sessions: {
+        Args: { p_stale_after?: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

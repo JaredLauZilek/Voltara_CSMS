@@ -115,29 +115,48 @@ insert into public.charge_point_models (id, vendor_id, name, power_kw, connector
 
 -- ── Demo charge point (matches the simulator config in infra/) ─────────────
 
-insert into public.charge_points (
-  id, tenant_id, location_id, ocpp_identity, name, model_id, ocpp_version, lifecycle
-) values (
-  '66666666-6666-4666-8666-666666666661',
-  '11111111-1111-4111-8111-111111111111',
-  '33333333-3333-4333-8333-333333333331',
-  'VCP-DEMO-001', 'HQ Bay 1 — Virtual', '55555555-5555-4555-8555-555555555551', '1.6', 'pending'
-);
+-- Basic Auth keys for local/simulator use. Plaintext (never stored) is:
+--   VCP-DEMO-001 → demo-charger-key-001
+--   VCP-DEMO-002 → demo-charger-key-002   (Demo CPO tenant — proves the gateway
+--                                          resolves tenant from identity)
+-- Production keys are generated at registration and shown exactly once.
 
-insert into public.evses (id, tenant_id, charge_point_id, evse_number) values (
-  '77777777-7777-4777-8777-777777777771',
-  '11111111-1111-4111-8111-111111111111',
-  '66666666-6666-4666-8666-666666666661', 1
-);
+insert into public.charge_points (
+  id, tenant_id, location_id, ocpp_identity, name, model_id, ocpp_version, lifecycle, auth_key_hash
+) values
+  (
+    '66666666-6666-4666-8666-666666666661',
+    '11111111-1111-4111-8111-111111111111',
+    '33333333-3333-4333-8333-333333333331',
+    'VCP-DEMO-001', 'HQ Bay 1 — Virtual', '55555555-5555-4555-8555-555555555551', '1.6', 'active',
+    crypt('demo-charger-key-001', gen_salt('bf'))
+  ),
+  (
+    '66666666-6666-4666-8666-666666666662',
+    '22222222-2222-4222-8222-222222222222',
+    '33333333-3333-4333-8333-333333333333',
+    'VCP-DEMO-002', 'Demo Mall Bay 1', '55555555-5555-4555-8555-555555555551', '1.6', 'active',
+    crypt('demo-charger-key-002', gen_salt('bf'))
+  ),
+  (
+    '66666666-6666-4666-8666-666666666663',
+    '11111111-1111-4111-8111-111111111111',
+    '33333333-3333-4333-8333-333333333331',
+    'VCP-RETIRED-001', 'HQ Bay 9 — Retired', '55555555-5555-4555-8555-555555555551', '1.6', 'decommissioned',
+    crypt('demo-charger-key-003', gen_salt('bf'))
+  );
+
+insert into public.evses (id, tenant_id, charge_point_id, evse_number) values
+  ('77777777-7777-4777-8777-777777777771', '11111111-1111-4111-8111-111111111111', '66666666-6666-4666-8666-666666666661', 1),
+  ('77777777-7777-4777-8777-777777777772', '22222222-2222-4222-8222-222222222222', '66666666-6666-4666-8666-666666666662', 1);
 
 insert into public.connectors (
   id, tenant_id, evse_id, charge_point_id, ocpp_connector_id, connector_type, max_kw
-) values (
-  '88888888-8888-4888-8888-888888888881',
-  '11111111-1111-4111-8111-111111111111',
-  '77777777-7777-4777-8777-777777777771',
-  '66666666-6666-4666-8666-666666666661', 1, 'Type2', 22
-);
+) values
+  ('88888888-8888-4888-8888-888888888881', '11111111-1111-4111-8111-111111111111',
+   '77777777-7777-4777-8777-777777777771', '66666666-6666-4666-8666-666666666661', 1, 'Type2', 22),
+  ('88888888-8888-4888-8888-888888888882', '22222222-2222-4222-8222-222222222222',
+   '77777777-7777-4777-8777-777777777772', '66666666-6666-4666-8666-666666666662', 1, 'Type2', 22);
 
 -- ── Sample RFID tag ─────────────────────────────────────────────────────────
 

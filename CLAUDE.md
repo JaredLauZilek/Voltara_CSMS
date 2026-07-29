@@ -102,6 +102,7 @@ apps/admin/src/
 - Remote application happens ONLY via the `migrate` workflow (`supabase db push`): staging automatic on merge, production behind environment approval. Supabase MCP `apply_migration` is for local exploration only and must be captured as a committed file in the same PR (ADR-0004).
 - After every migration: `pnpm gen:types`. `packages/shared/src/database.types.ts` is generated — never hand-edit it.
 - High-volume tables (`meter_values`, `ocpp_messages`, future telemetry) must ship **partitioned (monthly) with a pg_cron create/drop retention job** from their first migration.
+- **Partitions live in the `partitions` schema, never `public`.** PostgREST exposes every table in `public`, and RLS on a partitioned parent does not protect a child queried directly — a partition in `public` would be a route around tenant isolation. Parents stay in `public` with the policies; `create_monthly_partition()` places children in `partitions` and revokes their grants.
 - Don't store derivable fields — compute via SQL views (`vw_*`).
 
 ## §8 Realtime rules
@@ -118,7 +119,8 @@ apps/admin/src/
 
 ## §10 Security (locked)
 
-- Charger auth: WSS + per-charger Basic Auth (Security Profile 2) is the floor; per-charger keys are argon2-hashed in `charge_points.auth_key_hash`, plaintext shown exactly once at registration, rotated via `ChangeConfiguration(AuthorizationKey)` keeping old+new valid until the next successful reconnect. Profile 1 (`ws://`) only behind an explicit per-tenant legacy flag.
+- Charger auth: WSS + per-charger Basic Auth (Security Profile 2) is the floor; plaintext shown exactly once at registration, rotated via `ChangeConfiguration(AuthorizationKey)` keeping old+new valid until the next successful reconnect. Profile 1 (`ws://`) only behind an explicit per-tenant legacy flag.
+- Keys are hashed with **bcrypt via pgcrypto** in `charge_points.auth_key_hash`, and verified **inside Postgres** (`auth_key_hash = crypt($key, auth_key_hash)`) as part of the charge-point lookup the gateway must make anyway. Chosen over argon2-in-Node because the key is a high-entropy machine-generated secret (so the slow-KDF advantage is moot), it keeps a native crypto dependency out of the gateway's container image, and it leaves exactly one place that knows how keys are hashed.
 - Never log or persist credentials; redact `AuthorizationKey` in frame logs.
 - Supabase Auth for humans; deny-by-default RLS; tenant writes (tenants/memberships/platform_admins) are service-role only.
 

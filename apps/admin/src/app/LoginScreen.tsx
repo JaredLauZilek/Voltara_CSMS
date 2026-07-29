@@ -44,8 +44,7 @@ export function LoginScreen() {
       // whether an email exists), but surface anything else — rate limits,
       // network failures, misconfigured project URL — verbatim, or the screen
       // sends you hunting for a typo that isn't there.
-      const isBadCredentials =
-        authError.code === 'invalid_credentials' || authError.status === 400;
+      const isBadCredentials = authError.code === 'invalid_credentials' || authError.status === 400;
       setError(isBadCredentials ? 'Invalid email or password.' : authError.message);
       setPassword('');
       setBusy(false);
