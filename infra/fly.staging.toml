@@ -13,7 +13,10 @@ app = "voltara-gateway-staging"
 primary_region = "sin"
 
 [build]
-  dockerfile = "infra/Dockerfile.gateway"
+  # Relative to THIS file, not the repo root. The build context is still the
+  # working directory the deploy runs from (the repo root), which is what the
+  # COPY paths inside the Dockerfile assume.
+  dockerfile = "Dockerfile.gateway"
 
 [env]
   GATEWAY_PORT = "9221"

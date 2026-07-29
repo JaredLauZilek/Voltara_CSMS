@@ -1,0 +1,22 @@
+# The image runs `pnpm install` itself, so shipping the local install is pure
+# upload cost — it was 468 MB of the 487 MB build context.
+node_modules
+**/node_modules
+
+# Build output is regenerated inside the image.
+dist
+**/dist
+.turbo
+**/.turbo
+
+# Nothing here belongs in a server image.
+.git
+.github
+supabase
+tests
+docs
+apps/admin
+packages/ui
+**/.env
+**/.env.*
+*.log
