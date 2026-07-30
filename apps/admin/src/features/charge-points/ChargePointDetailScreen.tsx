@@ -72,7 +72,8 @@ export function ChargePointDetailScreen() {
         : 'Offline';
 
   const host = GATEWAY_URL.replace(/^wss?:\/\//, '').replace(/\/$/, '');
-  const insecureAllowed = cp.security_profile === 1;
+  const plaintext = cp.security_profile === 1;
+  const openMode = cp.security_profile === 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -113,7 +114,7 @@ export function ChargePointDetailScreen() {
             </span>
             <Badge status={connectionBadge} />
             {cp.lifecycle === 'pending' && <Badge status="Pending" />}
-            {insecureAllowed && (
+            {(plaintext || openMode) && (
               <span
                 style={{
                   fontSize: 11,
@@ -124,7 +125,7 @@ export function ChargePointDetailScreen() {
                   color: C.warning,
                 }}
               >
-                ws:// allowed
+                {openMode ? 'open · no auth' : 'ws:// allowed'}
               </span>
             )}
           </div>
@@ -188,8 +189,8 @@ export function ChargePointDetailScreen() {
           <div style={sectionTitle}>Connection settings</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Setting
-              label={insecureAllowed ? 'Server URL (TLS off)' : 'Server URL (TLS on)'}
-              value={`${host}:${insecureAllowed ? '80' : '443'}/ocpp`}
+              label={plaintext ? 'Server URL (TLS off)' : 'Server URL (TLS on)'}
+              value={`${host}:${plaintext ? '80' : '443'}/ocpp`}
             />
             <Setting label="Charge Point ID / username" value={cp.ocpp_identity} />
             <Setting
@@ -198,8 +199,9 @@ export function ChargePointDetailScreen() {
             />
           </div>
           <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.6 }}>
-            The password is stored only as a hash and cannot be shown again. If it is lost, delete
-            this charger and register it again.
+            {openMode
+              ? 'Open mode: the charger needs no username or password — only its ID. TLS on or off both work.'
+              : 'The password is stored only as a hash and cannot be shown again. If it is lost, delete this charger and register it again.'}
           </div>
         </div>
       </div>

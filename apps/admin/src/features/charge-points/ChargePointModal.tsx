@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
 import { useLocations } from '@/features/locations';
+import { SECURITY_PROFILES } from './types';
 import type { ChargePointUpdate, ChargePointWithConnectors } from './types';
 
 interface Props {
@@ -45,7 +46,7 @@ export function ChargePointModal({
   const { data: locations = [] } = useLocations();
   const [name, setName] = useState(chargePoint.name);
   const [locationId, setLocationId] = useState(chargePoint.location_id ?? '');
-  const [allowInsecure, setAllowInsecure] = useState(chargePoint.security_profile === 1);
+  const [securityProfile, setSecurityProfile] = useState<number>(chargePoint.security_profile);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const canSave = name.trim().length > 0 && !isSaving;
@@ -57,7 +58,7 @@ export function ChargePointModal({
     onSave({
       name: name.trim(),
       location_id: locationId || null,
-      security_profile: allowInsecure ? 1 : 2,
+      security_profile: securityProfile,
     });
   };
 
@@ -85,29 +86,25 @@ export function ChargePointModal({
           </select>
         </div>
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 8,
-            fontSize: 12,
-            color: C.slate,
-            cursor: 'pointer',
-            lineHeight: 1.5,
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={allowInsecure}
-            onChange={(e) => setAllowInsecure(e.target.checked)}
-            style={{ accentColor: C.warning, cursor: 'pointer', marginTop: 2 }}
-          />
-          <span>
-            <strong style={{ color: C.ink }}>Allow unencrypted connection (ws://)</strong> —
-            security profile 1, for commissioning or legacy firmware. Switch back off once the
-            charger is proven over TLS; the change applies at its next reconnect.
-          </span>
-        </label>
+        <div>
+          <label style={labelStyle}>Connection security</label>
+          <select
+            value={securityProfile}
+            onChange={(e) => setSecurityProfile(Number(e.target.value))}
+            style={inputStyle}
+          >
+            {SECURITY_PROFILES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+          <div style={{ fontSize: 11, color: C.slate, marginTop: 4, lineHeight: 1.5 }}>
+            {SECURITY_PROFILES.find((p) => p.value === securityProfile)?.hint ??
+              'Applies at the charger&apos;s next reconnect.'}{' '}
+            Applies at the next reconnect.
+          </div>
+        </div>
       </div>
 
       {saveError && (

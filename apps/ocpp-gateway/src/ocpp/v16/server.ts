@@ -149,6 +149,22 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
           log.warn('accepting PLAINTEXT ws:// connection (security profile 1)');
         }
 
+        // Security profile 0: identity-only. The charger is trusted on its ID
+        // alone — regional-incumbent parity, and the easiest commissioning
+        // rung. Whatever credentials it may or may not send are ignored.
+        if (cp.security_profile === 0) {
+          log.info('accepting identity-only connection (security profile 0)');
+          limiter.clear(identity);
+          accept({
+            chargePointId: cp.id,
+            tenantId: cp.tenant_id,
+            identity,
+            remoteAddress,
+            quirks: resolveQuirks(cp.vendor_quirks, cp.quirks_override),
+          });
+          return;
+        }
+
         if (!cp.has_key) {
           log.warn('rejected: no auth key registered');
           reject(401, 'Unauthorized');

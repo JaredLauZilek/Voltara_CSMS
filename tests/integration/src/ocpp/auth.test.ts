@@ -298,3 +298,41 @@ describe('authentication failure diagnostics', () => {
     expect(rows[0].close_reason).not.toContain('short-key');
   });
 });
+
+describe('security profile 0 — identity-only connections', () => {
+  it('accepts a charger presenting nothing but its ID', async () => {
+    await sql`update public.charge_points set security_profile = 0 where id = ${FIXTURES.chargePointA}`;
+
+    const charger = await connectCharger(
+      gw.port,
+      FIXTURES.identityA,
+      undefined as unknown as string,
+    );
+    const boot = await charger.call<{ status: string }>('BootNotification', {
+      chargePointVendor: 'OpenMode',
+      chargePointModel: 'IdentityOnly',
+    });
+    expect(boot.status).toBe('Accepted');
+    await charger.close();
+  });
+
+  it('ignores whatever credentials an open-mode charger happens to send', async () => {
+    await sql`update public.charge_points set security_profile = 0 where id = ${FIXTURES.chargePointA}`;
+
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, 'total-nonsense-key');
+    const boot = await charger.call<{ status: string }>('BootNotification', {
+      chargePointVendor: 'OpenMode',
+      chargePointModel: 'IdentityOnly',
+    });
+    expect(boot.status).toBe('Accepted');
+    await charger.close();
+  });
+
+  it('still requires the password at profile 1 and above', async () => {
+    // resetChargerState restores profile 2; drop to 1 to isolate the auth check.
+    await sql`update public.charge_points set security_profile = 1 where id = ${FIXTURES.chargePointA}`;
+    await expect(
+      connectCharger(gw.port, FIXTURES.identityA, undefined as unknown as string),
+    ).rejects.toThrow();
+  });
+});

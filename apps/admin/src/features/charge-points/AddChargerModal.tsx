@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { C, Modal } from '@voltara/ui';
 import { useLocations } from '@/features/locations';
 import { useChargePointWatch, useRegisterChargePoint } from './hooks';
-import { CONNECTOR_TYPES, type RegisteredCharger } from './types';
+import { CONNECTOR_TYPES, SECURITY_PROFILES, type RegisteredCharger } from './types';
 
 const GATEWAY_URL =
   (import.meta.env.VITE_GATEWAY_URL as string | undefined) ??
@@ -50,7 +50,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
   const [connectorCount, setConnectorCount] = useState(1);
   const [connectorType, setConnectorType] = useState<string>('Type2');
   const [maxKw, setMaxKw] = useState('');
-  const [allowInsecure, setAllowInsecure] = useState(false);
+  const [securityProfile, setSecurityProfile] = useState<0 | 1 | 2>(2);
   const [registered, setRegistered] = useState<RegisteredCharger | null>(null);
 
   // The identity tracks the name until the operator edits it themselves —
@@ -70,7 +70,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
         connectorCount,
         connectorType,
         maxKw: maxKw ? Number(maxKw) : null,
-        allowInsecure,
+        securityProfile,
       },
       { onSuccess: setRegistered },
     );
@@ -81,7 +81,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
       <CredentialsStep
         charger={registered}
         connectorCount={connectorCount}
-        allowInsecure={allowInsecure}
+        securityProfile={securityProfile}
         onClose={onClose}
       />
     );
@@ -179,34 +179,42 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        {/* TLS is the floor, not a preference — but a charger with a stale CA
-            store cannot always complete a modern handshake, and turning TLS off
-            is the honest way to isolate that during commissioning. Explicit,
-            per-charger, never the default. */}
+        {/* The security ladder. Profile 2 is the default and the production
+            floor; 0 exists because it is how the incumbent networks run and a
+            charger that cannot get online teaches nobody anything. */}
         <div style={{ gridColumn: '1/-1' }}>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 8,
-              fontSize: 12,
-              color: C.slate,
-              cursor: 'pointer',
-              lineHeight: 1.5,
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={allowInsecure}
-              onChange={(e) => setAllowInsecure(e.target.checked)}
-              style={{ accentColor: C.warning, cursor: 'pointer', marginTop: 2 }}
-            />
-            <span>
-              <strong style={{ color: C.ink }}>Allow unencrypted connection (ws://)</strong> — for
-              commissioning or legacy firmware that cannot complete a TLS handshake. Credentials and
-              meter data travel in clear text; switch back to TLS once the charger is proven.
-            </span>
-          </label>
+          <label style={labelStyle}>Connection security</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {SECURITY_PROFILES.map((p) => (
+              <label
+                key={p.value}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  padding: '8px 12px',
+                  borderRadius: 10,
+                  border: `1px solid ${securityProfile === p.value ? C.green : C.border}`,
+                  background: securityProfile === p.value ? C.honeydew : C.white,
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                <input
+                  type="radio"
+                  name="security-profile"
+                  checked={securityProfile === p.value}
+                  onChange={() => setSecurityProfile(p.value)}
+                  style={{ accentColor: C.green, cursor: 'pointer', marginTop: 2 }}
+                />
+                <span>
+                  <strong style={{ color: C.ink }}>{p.label}</strong>
+                  <span style={{ color: C.slate }}> — {p.hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -255,12 +263,12 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
 function CredentialsStep({
   charger,
   connectorCount,
-  allowInsecure,
+  securityProfile,
   onClose,
 }: {
   charger: RegisteredCharger;
   connectorCount: number;
-  allowInsecure: boolean;
+  securityProfile: 0 | 1 | 2;
   onClose: () => void;
 }) {
   const [acknowledged, setAcknowledged] = useState(false);
@@ -275,7 +283,11 @@ function CredentialsStep({
   // the port explicit — that firmware's parsers often require it.
   const host = GATEWAY_URL.replace(/^wss?:\/\//, '').replace(/\/$/, '');
   const serverUrl = `${GATEWAY_URL.replace(/\/$/, '')}/ocpp`;
-  const hostPortUrl = allowInsecure ? `${host}:80/ocpp` : `${host}:443/ocpp`;
+  // Profile 1 forces plaintext; 0 works either way but TLS is recommended when
+  // the charger supports it — matching how incumbent networks configure units.
+  const plaintext = securityProfile === 1;
+  const hostPortUrl = plaintext ? `${host}:80/ocpp` : `${host}:443/ocpp`;
+  const noAuth = securityProfile === 0;
 
   return (
     <Modal
@@ -302,34 +314,43 @@ function CredentialsStep({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <CopyRow
-          label={allowInsecure ? 'Server URL · TLS OFF' : 'Server URL · TLS ON'}
+          label={plaintext ? 'Server URL · TLS OFF' : 'Server URL · TLS ON'}
           value={hostPortUrl}
           mono
         />
         <CopyRow label="Charge Point ID" value={charger.ocppIdentity} mono />
-        <CopyRow label="Username (TLS/Basic auth)" value={charger.ocppIdentity} mono />
-        <CopyRow label="Password / AuthorizationKey" value={charger.authKey} mono />
+        {!noAuth && (
+          <>
+            <CopyRow label="Username (TLS/Basic auth)" value={charger.ocppIdentity} mono />
+            <CopyRow label="Password / AuthorizationKey" value={charger.authKey} mono />
+          </>
+        )}
       </div>
 
       <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.6 }}>
         Set the charger to <strong>OCPP 1.6J</strong>
-        {allowInsecure ? (
+        {noAuth ? (
+          <>
+            . <strong>No username or password is needed</strong> — leave auth disabled on the
+            charger; TLS on or off both work (TLS recommended if the unit supports it).
+          </>
+        ) : plaintext ? (
           <>
             {' '}
-            with its <strong>TLS toggle OFF</strong> (this charger was registered to allow
-            unencrypted connections).
+            with its <strong>TLS toggle OFF</strong> and auth enabled (this charger was registered
+            for unencrypted connections).
           </>
         ) : (
           <>
             {' '}
-            with its <strong>TLS toggle ON</strong> (security profile 2). Leave any CA/certificate
-            field empty — the certificate is publicly trusted.
+            with its <strong>TLS toggle ON</strong> and auth enabled. Leave any CA/certificate field
+            empty — the certificate is publicly trusted.
           </>
         )}{' '}
         The charger appends its own ID to the URL. If yours wants a full URL instead of host:port,
         use{' '}
         <code style={{ fontSize: 11 }}>
-          {allowInsecure ? serverUrl.replace(/^wss:/, 'ws:') : serverUrl}
+          {plaintext ? serverUrl.replace(/^wss:/, 'ws:') : serverUrl}
         </code>
       </div>
 

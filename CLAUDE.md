@@ -119,7 +119,7 @@ apps/admin/src/
 
 ## §10 Security (locked)
 
-- Charger auth: WSS + per-charger Basic Auth (Security Profile 2) is the floor; plaintext shown exactly once at registration, rotated via `ChangeConfiguration(AuthorizationKey)` keeping old+new valid until the next successful reconnect. Profile 1 (`ws://`) only behind an explicit per-tenant legacy flag.
+- Charger auth is an explicit per-charger ladder in `charge_points.security_profile`, enforced by the gateway at the handshake: **2 = Basic Auth over WSS (default, and the floor for production revenue chargers)** · 1 = Basic Auth over `ws://` (legacy TLS stacks) · 0 = identity-only, no credentials (incumbent-CSMS parity; commissioning). 0 and 1 exist because the regional installed base runs that way — they are opt-in per charger, surfaced with a warning chip in the admin UI, and never the default. Keys are shown exactly once at registration, rotated via `ChangeConfiguration(AuthorizationKey)` keeping old+new valid until the next successful reconnect.
 - Keys are hashed with **bcrypt via pgcrypto** in `charge_points.auth_key_hash`, and verified **inside Postgres** (`auth_key_hash = crypt($key, auth_key_hash)`) as part of the charge-point lookup the gateway must make anyway. Chosen over argon2-in-Node because the key is a high-entropy machine-generated secret (so the slow-KDF advantage is moot), it keeps a native crypto dependency out of the gateway's container image, and it leaves exactly one place that knows how keys are hashed.
 - Never log or persist credentials; redact `AuthorizationKey` in frame logs.
 - Supabase Auth for humans; deny-by-default RLS; tenant writes (tenants/memberships/platform_admins) are service-role only.

@@ -23,13 +23,32 @@ export interface RegisterChargerInput {
   connectorType: string;
   maxKw: number | null;
   /**
-   * Drops the charger to OCPP security profile 1, letting it connect over
-   * plaintext ws://. Exists because some firmware cannot complete a modern TLS
-   * handshake (stale CA store) and because flipping TLS off is the fastest way
-   * to isolate a commissioning failure. Never the default.
+   * The security ladder, matching how chargers actually ship in this market:
+   *   0 — identity only, no credentials (incumbent-CSMS parity; easiest
+   *       commissioning; anyone knowing the ID could impersonate the charger)
+   *   1 — password over plaintext ws:// (legacy TLS stacks)
+   *   2 — password over TLS (the default, and the floor for revenue chargers)
    */
-  allowInsecure?: boolean;
+  securityProfile: 0 | 1 | 2;
 }
+
+export const SECURITY_PROFILES = [
+  {
+    value: 2 as const,
+    label: 'Password over TLS',
+    hint: 'Recommended. Required for revenue chargers.',
+  },
+  {
+    value: 1 as const,
+    label: 'Password, no TLS',
+    hint: 'For firmware that cannot complete a modern TLS handshake.',
+  },
+  {
+    value: 0 as const,
+    label: 'Open — charger ID only',
+    hint: 'No password. How most incumbent networks run. Easiest to commission; least secure.',
+  },
+];
 
 /** Returned once, at registration. The key is never retrievable again. */
 export interface RegisteredCharger {

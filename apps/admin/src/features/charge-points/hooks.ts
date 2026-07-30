@@ -66,8 +66,10 @@ export function useRegisterChargePoint() {
       const registered = await api.registerChargePoint(input);
       // The RPC always registers at profile 2; the explicit downgrade is a
       // separate, auditable write rather than a parameter that could default wrong.
-      if (input.allowInsecure) {
-        await api.updateChargePoint(registered.chargePointId, { security_profile: 1 });
+      if (input.securityProfile !== 2) {
+        await api.updateChargePoint(registered.chargePointId, {
+          security_profile: input.securityProfile,
+        });
       }
       return registered;
     },
