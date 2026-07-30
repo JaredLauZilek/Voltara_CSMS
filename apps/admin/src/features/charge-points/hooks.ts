@@ -30,6 +30,35 @@ export function useChargePointWatch(id: string | null, enabled: boolean) {
   });
 }
 
+/**
+ * Detail + logs poll while the page is open: during commissioning the whole
+ * point is watching state change without touching anything. (Realtime
+ * Broadcast replaces the polls in the next slice.)
+ */
+export function useChargePointDetail(id: string) {
+  return useQuery({
+    queryKey: ['charge-points', 'detail', id],
+    queryFn: () => api.getChargePointDetail(id),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useConnectionEvents(chargePointId: string) {
+  return useQuery({
+    queryKey: ['charge-points', 'connection-events', chargePointId],
+    queryFn: () => api.listConnectionEvents(chargePointId),
+    refetchInterval: 5_000,
+  });
+}
+
+export function useRecentFrames(chargePointId: string) {
+  return useQuery({
+    queryKey: ['charge-points', 'frames', chargePointId],
+    queryFn: () => api.listRecentFrames(chargePointId),
+    refetchInterval: 5_000,
+  });
+}
+
 export function useRegisterChargePoint() {
   const qc = useQueryClient();
   return useMutation({

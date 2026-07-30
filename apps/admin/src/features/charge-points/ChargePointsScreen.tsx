@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge, C, KPICard, Toolbar } from '@voltara/ui';
 import { SITE_TYPE_LABELS, formatDateTime, type SiteType } from '@voltara/shared';
 import { useChargePoints } from './hooks';
@@ -149,6 +150,7 @@ export function ChargePointsScreen() {
 }
 
 function SiteCard({ group }: { group: SiteGroup }) {
+  const navigate = useNavigate();
   const counts = useMemo(() => {
     let points = 0;
     let available = 0;
@@ -211,9 +213,23 @@ function SiteCard({ group }: { group: SiteGroup }) {
                   identity={cp.ocpp_identity}
                   connector={connector}
                   status={displayStatus(cp, connector)}
+                  onClick={() => navigate(`/charge-points/${cp.id}`)}
                 />
               ))
-            : [<PendingTile key={cp.id} cp={cp} />],
+            : [
+                <button
+                  key={cp.id}
+                  onClick={() => navigate(`/charge-points/${cp.id}`)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <PendingTile cp={cp} />
+                </button>,
+              ],
         )}
       </div>
 
@@ -228,7 +244,12 @@ function SiteCard({ group }: { group: SiteGroup }) {
       >
         {group.chargePoints.map((cp) => (
           <span key={cp.id} style={{ fontSize: 11, color: C.slate }}>
-            <strong style={{ color: C.ink, fontWeight: 600 }}>{cp.name}</strong>
+            <Link
+              to={`/charge-points/${cp.id}`}
+              style={{ color: C.ink, fontWeight: 600, textDecoration: 'none' }}
+            >
+              {cp.name}
+            </Link>
             {' · '}
             {cp.lifecycle === 'pending'
               ? 'never connected'

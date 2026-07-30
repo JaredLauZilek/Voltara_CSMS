@@ -7,7 +7,7 @@ import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { MapPin, Zap } from 'lucide-react';
 import { LocationsScreen } from '@/features/locations';
-import { ChargePointsScreen } from '@/features/charge-points';
+import { ChargePointsFeature } from '@/features/charge-points';
 
 export interface RouteDef {
   path: string;
@@ -16,7 +16,7 @@ export interface RouteDef {
 }
 
 export const ROUTES: RouteDef[] = [
-  { path: '/charge-points', title: 'Chargers', screen: ChargePointsScreen },
+  { path: '/charge-points', title: 'Chargers', screen: ChargePointsFeature },
   { path: '/locations', title: 'Locations', screen: LocationsScreen },
 ];
 

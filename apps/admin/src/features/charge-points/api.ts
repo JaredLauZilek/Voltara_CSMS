@@ -43,6 +43,83 @@ export async function getChargePoint(id: string): Promise<ChargePoint | null> {
   return data;
 }
 
+/** Same shape as the board rows, for one charger. */
+export async function getChargePointDetail(id: string): Promise<ChargePointWithConnectors | null> {
+  const { data, error } = await supabase
+    .from('charge_points')
+    .select('*, connectors(*), locations(name, site_type)')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  const { connectors, locations, ...cp } = data as typeof data & {
+    connectors: ChargePointWithConnectors['connectors'];
+    locations: { name: string; site_type: string } | null;
+  };
+  return {
+    ...(cp as ChargePoint),
+    connectors: [...(connectors ?? [])].sort((a, b) => a.ocpp_connector_id - b.ocpp_connector_id),
+    location_name: locations?.name ?? null,
+    location_site_type: locations?.site_type ?? null,
+  };
+}
+
+export interface ConnectionEvent {
+  id: number;
+  event: string;
+  close_reason: string | null;
+  close_code: number | null;
+  remote_address: string | null;
+  gateway_instance: string | null;
+  recorded_at: string;
+}
+
+/**
+ * The commissioning debug tool: every connect, disconnect, and — critically —
+ * every REJECTION with its reason (bad key, TLS required, decommissioned).
+ * An empty list while a charger is "not working" is itself the diagnosis: the
+ * unit never reached the gateway at all.
+ */
+export async function listConnectionEvents(
+  chargePointId: string,
+  limit = 50,
+): Promise<ConnectionEvent[]> {
+  const { data, error } = await supabase
+    .from('charge_point_connection_log')
+    .select('id, event, close_reason, close_code, remote_address, gateway_instance, recorded_at')
+    .eq('charge_point_id', chargePointId)
+    .order('id', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface OcppFrame {
+  id: number;
+  direction: 'in' | 'out';
+  message_type: number;
+  action: string | null;
+  ocpp_message_id: string | null;
+  payload: unknown;
+  error_code: string | null;
+  error_description: string | null;
+  recorded_at: string;
+}
+
+export async function listRecentFrames(chargePointId: string, limit = 50): Promise<OcppFrame[]> {
+  const { data, error } = await supabase
+    .from('ocpp_messages')
+    .select(
+      'id, direction, message_type, action, ocpp_message_id, payload, error_code, error_description, recorded_at',
+    )
+    .eq('charge_point_id', chargePointId)
+    .order('id', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as OcppFrame[];
+}
+
 /**
  * Registration goes through a database function, not an insert: the auth key
  * must be generated and hashed server-side and returned exactly once. The
