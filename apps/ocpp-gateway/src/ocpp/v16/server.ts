@@ -118,6 +118,37 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
           return;
         }
 
+        // TLS enforcement, per charger. Fly terminates TLS at its edge and
+        // reports the original scheme in x-forwarded-proto. Security Profile 2
+        // (the default) requires wss://; a plaintext ws:// connection is only
+        // accepted for chargers explicitly flagged security_profile = 1 —
+        // the commissioning/legacy escape hatch (CLAUDE.md §10). When the
+        // header is absent there is no proxy (local dev, tests), so we cannot
+        // and do not judge the transport.
+        const rawProto = handshake.headers['x-forwarded-proto'];
+        const forwardedProto = (Array.isArray(rawProto) ? rawProto[0] : (rawProto ?? ''))
+          .split(',')[0]
+          .trim()
+          .toLowerCase();
+        if (cp.security_profile >= 2 && forwardedProto === 'http') {
+          // Rejecting here — with a recorded reason — beats a redirect the
+          // charger cannot follow: the operator can see WHY it failed.
+          log.warn('rejected: plaintext ws:// but security profile 2 requires TLS');
+          await insertConnectionLog(db, {
+            tenantId: cp.tenant_id,
+            chargePointId: cp.id,
+            event: 'rejected',
+            gatewayInstance: config.GATEWAY_INSTANCE,
+            remoteAddress,
+            closeReason: 'tls required (security profile 2)',
+          });
+          reject(426, 'TLS required');
+          return;
+        }
+        if (forwardedProto === 'http') {
+          log.warn('accepting PLAINTEXT ws:// connection (security profile 1)');
+        }
+
         if (!cp.has_key) {
           log.warn('rejected: no auth key registered');
           reject(401, 'Unauthorized');

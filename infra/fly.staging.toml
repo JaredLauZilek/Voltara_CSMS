@@ -26,9 +26,12 @@ primary_region = "sin"
 
 [http_service]
   internal_port = 9221
-  # Chargers must use wss://. Plain ws:// gets redirected, which is the correct
-  # outcome: Security Profile 2 is the floor (CLAUDE.md §10).
-  force_https = true
+  # No forced HTTPS redirect: chargers cannot follow redirects, so a silent 301
+  # is the worst possible answer to a plaintext ws:// attempt. Instead the
+  # gateway itself decides per charger — Security Profile 2 (default) rejects
+  # plaintext WITH a logged reason; profile 1 (explicit commissioning/legacy
+  # flag) accepts it. Admin/driver traffic does not ride this hostname.
+  force_https = false
   # Never scale to zero. A charger holds one WebSocket open for days; a
   # sleeping gateway is an offline charging network.
   auto_stop_machines = false

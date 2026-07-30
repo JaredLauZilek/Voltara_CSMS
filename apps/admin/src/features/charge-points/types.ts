@@ -22,6 +22,13 @@ export interface RegisterChargerInput {
   connectorCount: number;
   connectorType: string;
   maxKw: number | null;
+  /**
+   * Drops the charger to OCPP security profile 1, letting it connect over
+   * plaintext ws://. Exists because some firmware cannot complete a modern TLS
+   * handshake (stale CA store) and because flipping TLS off is the fastest way
+   * to isolate a commissioning failure. Never the default.
+   */
+  allowInsecure?: boolean;
 }
 
 /** Returned once, at registration. The key is never retrievable again. */

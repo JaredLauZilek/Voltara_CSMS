@@ -33,7 +33,15 @@ export function useChargePointWatch(id: string | null, enabled: boolean) {
 export function useRegisterChargePoint() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: RegisterChargerInput) => api.registerChargePoint(input),
+    mutationFn: async (input: RegisterChargerInput) => {
+      const registered = await api.registerChargePoint(input);
+      // The RPC always registers at profile 2; the explicit downgrade is a
+      // separate, auditable write rather than a parameter that could default wrong.
+      if (input.allowInsecure) {
+        await api.updateChargePoint(registered.chargePointId, { security_profile: 1 });
+      }
+      return registered;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['charge-points'] });
     },

@@ -75,7 +75,12 @@ export async function connectCharger(
   port: number,
   identity: string,
   password: string,
-  options: { handlers?: Record<string, (params: unknown) => unknown> } = {},
+  options: {
+    handlers?: Record<string, (params: unknown) => unknown>;
+    /** Extra upgrade-request headers — e.g. x-forwarded-proto, to simulate what
+     * Fly's proxy stamps on a plaintext ws:// connection. */
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<ScriptedCharger> {
   const client = new RPCClient({
     endpoint: `ws://127.0.0.1:${port}`,
@@ -86,6 +91,7 @@ export async function connectCharger(
     // exactly the disconnects we are asserting on.
     reconnect: false,
     callTimeoutMs: 8_000,
+    headers: options.headers,
   } as ConstructorParameters<typeof RPCClient>[0]);
 
   for (const [action, handler] of Object.entries(options.handlers ?? {})) {
@@ -138,7 +144,8 @@ export async function resetChargerState(): Promise<void> {
   await sql`
     update public.charge_points
     set connection_state = 'never_connected', last_seen_at = null, last_boot_at = null,
-        vendor_reported = null, model_reported = null, firmware_version = null, config = '{}'::jsonb
+        vendor_reported = null, model_reported = null, firmware_version = null, config = '{}'::jsonb,
+        security_profile = 2
   `;
   await sql`update public.connectors set status = 'Unknown', status_updated_at = null, last_error_code = null`;
   await sql`update public.id_tags set status = 'active', expires_at = null`;

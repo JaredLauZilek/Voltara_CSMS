@@ -50,6 +50,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
   const [connectorCount, setConnectorCount] = useState(1);
   const [connectorType, setConnectorType] = useState<string>('Type2');
   const [maxKw, setMaxKw] = useState('');
+  const [allowInsecure, setAllowInsecure] = useState(false);
   const [registered, setRegistered] = useState<RegisteredCharger | null>(null);
 
   // The identity tracks the name until the operator edits it themselves —
@@ -69,6 +70,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
         connectorCount,
         connectorType,
         maxKw: maxKw ? Number(maxKw) : null,
+        allowInsecure,
       },
       { onSuccess: setRegistered },
     );
@@ -76,7 +78,12 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
 
   if (registered) {
     return (
-      <CredentialsStep charger={registered} connectorCount={connectorCount} onClose={onClose} />
+      <CredentialsStep
+        charger={registered}
+        connectorCount={connectorCount}
+        allowInsecure={allowInsecure}
+        onClose={onClose}
+      />
     );
   }
 
@@ -171,6 +178,36 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
             style={inputStyle}
           />
         </div>
+
+        {/* TLS is the floor, not a preference — but a charger with a stale CA
+            store cannot always complete a modern handshake, and turning TLS off
+            is the honest way to isolate that during commissioning. Explicit,
+            per-charger, never the default. */}
+        <div style={{ gridColumn: '1/-1' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              fontSize: 12,
+              color: C.slate,
+              cursor: 'pointer',
+              lineHeight: 1.5,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={allowInsecure}
+              onChange={(e) => setAllowInsecure(e.target.checked)}
+              style={{ accentColor: C.warning, cursor: 'pointer', marginTop: 2 }}
+            />
+            <span>
+              <strong style={{ color: C.ink }}>Allow unencrypted connection (ws://)</strong> — for
+              commissioning or legacy firmware that cannot complete a TLS handshake. Credentials and
+              meter data travel in clear text; switch back to TLS once the charger is proven.
+            </span>
+          </label>
+        </div>
       </div>
 
       {registerMut.error && (
@@ -218,10 +255,12 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
 function CredentialsStep({
   charger,
   connectorCount,
+  allowInsecure,
   onClose,
 }: {
   charger: RegisteredCharger;
   connectorCount: number;
+  allowInsecure: boolean;
   onClose: () => void;
 }) {
   const [acknowledged, setAcknowledged] = useState(false);
@@ -230,7 +269,13 @@ function CredentialsStep({
   const connected = watched?.connection_state === 'online';
   const everBooted = watched?.lifecycle === 'active';
 
+  // Two URL dialects exist in the wild. Spec-style firmware takes a full
+  // wss:// URL; a large class (most Chinese AC units) takes host:port/path in
+  // one field with a separate TLS toggle supplying the scheme. Show both, with
+  // the port explicit — that firmware's parsers often require it.
+  const host = GATEWAY_URL.replace(/^wss?:\/\//, '').replace(/\/$/, '');
   const serverUrl = `${GATEWAY_URL.replace(/\/$/, '')}/ocpp`;
+  const hostPortUrl = allowInsecure ? `${host}:80/ocpp` : `${host}:443/ocpp`;
 
   return (
     <Modal
@@ -256,16 +301,36 @@ function CredentialsStep({
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <CopyRow label="Server URL" value={serverUrl} />
+        <CopyRow
+          label={allowInsecure ? 'Server URL · TLS OFF' : 'Server URL · TLS ON'}
+          value={hostPortUrl}
+          mono
+        />
         <CopyRow label="Charge Point ID" value={charger.ocppIdentity} mono />
-        <CopyRow label="Basic Auth username" value={charger.ocppIdentity} mono />
+        <CopyRow label="Username (TLS/Basic auth)" value={charger.ocppIdentity} mono />
         <CopyRow label="Password / AuthorizationKey" value={charger.authKey} mono />
       </div>
 
       <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.6 }}>
-        Set the charger to <strong>OCPP 1.6J</strong> and <strong>security profile 2</strong> (TLS
-        with Basic Auth). Some firmware wants the ID appended to the URL instead of in its own
-        field: <code style={{ fontSize: 11 }}>{`${serverUrl}/${charger.ocppIdentity}`}</code>
+        Set the charger to <strong>OCPP 1.6J</strong>
+        {allowInsecure ? (
+          <>
+            {' '}
+            with its <strong>TLS toggle OFF</strong> (this charger was registered to allow
+            unencrypted connections).
+          </>
+        ) : (
+          <>
+            {' '}
+            with its <strong>TLS toggle ON</strong> (security profile 2). Leave any CA/certificate
+            field empty — the certificate is publicly trusted.
+          </>
+        )}{' '}
+        The charger appends its own ID to the URL. If yours wants a full URL instead of host:port,
+        use{' '}
+        <code style={{ fontSize: 11 }}>
+          {allowInsecure ? serverUrl.replace(/^wss:/, 'ws:') : serverUrl}
+        </code>
       </div>
 
       <ConnectionWatch connected={connected} everBooted={everBooted} watched={watched} />

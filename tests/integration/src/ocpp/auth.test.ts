@@ -186,3 +186,52 @@ describe('untrusted input', () => {
     await charger.close();
   });
 });
+
+describe('per-charger TLS enforcement (x-forwarded-proto from the edge proxy)', () => {
+  it('refuses plaintext ws:// for a profile-2 charger, with a recorded reason', async () => {
+    await expect(
+      connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+        headers: { 'x-forwarded-proto': 'http' },
+      }),
+    ).rejects.toThrow();
+
+    const rejections = await waitFor(
+      async () => {
+        const rows = await sql`
+          select close_reason from public.charge_point_connection_log
+          where charge_point_id = ${FIXTURES.chargePointA} and event = 'rejected'
+          order by id desc limit 1
+        `;
+        return rows.length > 0 ? rows : null;
+      },
+      { label: 'tls rejection to be logged' },
+    );
+    expect(rejections[0].close_reason).toMatch(/tls required/i);
+  });
+
+  it('accepts plaintext for a charger explicitly flagged security profile 1', async () => {
+    await sql`update public.charge_points set security_profile = 1 where id = ${FIXTURES.chargePointA}`;
+
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      headers: { 'x-forwarded-proto': 'http' },
+    });
+    const boot = await charger.call<{ status: string }>('BootNotification', {
+      chargePointVendor: 'Legacy',
+      chargePointModel: 'PlaintextUnit',
+    });
+    expect(boot.status).toBe('Accepted');
+    await charger.close();
+  });
+
+  it('is indifferent to the header when TLS was used', async () => {
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      headers: { 'x-forwarded-proto': 'https' },
+    });
+    const boot = await charger.call<{ status: string }>('BootNotification', {
+      chargePointVendor: 'Solidstudio',
+      chargePointModel: 'Virtual Charge Point',
+    });
+    expect(boot.status).toBe('Accepted');
+    await charger.close();
+  });
+});
