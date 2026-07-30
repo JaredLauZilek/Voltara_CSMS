@@ -52,7 +52,7 @@ describe('Security Profile 2 handshake', () => {
       },
       { label: 'rejection to be logged' },
     );
-    expect(rejections[0].close_reason).toBe('bad credentials');
+    expect(rejections[0].close_reason).toMatch(/bad credentials \(password length \d+/);
   });
 
   it('rejects an unknown identity', async () => {
@@ -233,5 +233,68 @@ describe('per-charger TLS enforcement (x-forwarded-proto from the edge proxy)', 
     });
     expect(boot.status).toBe('Accepted');
     await charger.close();
+  });
+});
+
+describe('authentication failure diagnostics', () => {
+  it('names the case where no credentials were presented at all', async () => {
+    // Firmware that ties its auth fields to a TLS toggle sends nothing when
+    // TLS is off — the most common real-world commissioning failure.
+    await expect(
+      connectCharger(gw.port, FIXTURES.identityA, undefined as unknown as string),
+    ).rejects.toThrow();
+
+    const rows = await waitFor(
+      async () => {
+        const r = await sql`
+          select close_reason from public.charge_point_connection_log
+          where charge_point_id = ${FIXTURES.chargePointA} and event = 'rejected'
+          order by id desc limit 1
+        `;
+        return r.length > 0 ? r : null;
+      },
+      { label: 'no-credentials rejection to be logged' },
+    );
+    expect(rows[0].close_reason).toBe('no credentials presented');
+  });
+
+  it('names the case where the auth username does not match the charge point id', async () => {
+    const wrongUser = Buffer.from(`NOT-THE-ID:${FIXTURES.keyA}`).toString('base64');
+    await expect(
+      connectCharger(gw.port, FIXTURES.identityA, undefined as unknown as string, {
+        headers: { authorization: `Basic ${wrongUser}` },
+      }),
+    ).rejects.toThrow();
+
+    const rows = await waitFor(
+      async () => {
+        const r = await sql`
+          select close_reason from public.charge_point_connection_log
+          where charge_point_id = ${FIXTURES.chargePointA} and event = 'rejected'
+          order by id desc limit 1
+        `;
+        return r[0]?.close_reason?.includes('username') ? r : null;
+      },
+      { label: 'username-mismatch rejection to be logged' },
+    );
+    expect(rows[0].close_reason).toBe('auth username does not match the charge point id');
+  });
+
+  it('reveals the length (never the value) of a wrong password', async () => {
+    await expect(connectCharger(gw.port, FIXTURES.identityA, 'short-key')).rejects.toThrow();
+
+    const rows = await waitFor(
+      async () => {
+        const r = await sql`
+          select close_reason from public.charge_point_connection_log
+          where charge_point_id = ${FIXTURES.chargePointA} and event = 'rejected'
+          order by id desc limit 1
+        `;
+        return r[0]?.close_reason?.includes('length') ? r : null;
+      },
+      { label: 'length-revealing rejection to be logged' },
+    );
+    expect(rows[0].close_reason).toBe('bad credentials (password length 9, expected 32)');
+    expect(rows[0].close_reason).not.toContain('short-key');
   });
 });

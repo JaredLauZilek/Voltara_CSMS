@@ -156,14 +156,32 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
         }
 
         if (!cp.key_ok) {
-          log.warn('rejected: bad auth key');
+          // Three different commissioning failures hide behind one wrong
+          // password, and the operator can only fix the one they can see:
+          //  - no Authorization header at all — common when firmware ties its
+          //    auth fields to a TLS toggle that has been switched off;
+          //  - header present but the username ≠ the charge point ID — the
+          //    parser then yields no password (the OCPP spec requires
+          //    username == identity);
+          //  - a password was presented but is wrong — its LENGTH (never its
+          //    value) is logged, because silent truncation by firmware is a
+          //    known failure mode for 32-char keys.
+          // The charger still receives an undifferentiated 401 either way.
+          const authHeaderPresent = Boolean(handshake.headers.authorization);
+          const reason =
+            password === null
+              ? authHeaderPresent
+                ? 'auth username does not match the charge point id'
+                : 'no credentials presented'
+              : `bad credentials (password length ${password.length}, expected 32)`;
+          log.warn({ reason }, 'rejected: authentication failed');
           await insertConnectionLog(db, {
             tenantId: cp.tenant_id,
             chargePointId: cp.id,
             event: 'rejected',
             gatewayInstance: config.GATEWAY_INSTANCE,
             remoteAddress,
-            closeReason: 'bad credentials',
+            closeReason: reason,
           });
           reject(401, 'Unauthorized');
           return;
