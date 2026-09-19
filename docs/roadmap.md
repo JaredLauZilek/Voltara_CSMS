@@ -15,7 +15,7 @@ The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../
 
 **Staging Supabase:** project `lxsfnqshcacsrolmymsg`, region `ap-southeast-1` (Singapore). All migrations applied, Voltara tenant bootstrapped, JWT claims hook enabled and verified. CI + integration workflows green on `main`.
 
-**Pending one-time manual steps:** **run [docs/runbook-staging-migration-repair.md](runbook-staging-migration-repair.md) before the first `db push`** (staging's migration ledger lists three MCP-applied versions under different numbers from the committed files) · create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to auto-deploy · on upgrade to Supabase Pro, enable leaked-password protection (Free-plan gated) · first Fly.io deploy of the gateway is deferred to Phase 1, when there is a real OCPP server worth deploying.
+**Pending one-time manual steps:** create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to auto-deploy · on upgrade to Supabase Pro, enable leaked-password protection (Free-plan gated) · first Fly.io deploy of the gateway is deferred to Phase 1, when there is a real OCPP server worth deploying.
 
 ---
 
