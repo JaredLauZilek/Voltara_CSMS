@@ -10,6 +10,7 @@ import {
   type RemoteCommandRow,
 } from './db/commands.js';
 import { findConnectionOwner } from './db/logs.js';
+import { mergeConfigurationSnapshot } from './db/chargePoints.js';
 import type { GatewayConfig } from './config.js';
 import type { Logger } from './logger.js';
 import type { ChargerConnection, ConnectionRegistry } from './registry.js';
@@ -139,6 +140,9 @@ export class CommandBus {
     try {
       const response = await usable.call(action, parsed.data);
       const outcome = ocpp16.readCommandOutcome(action, response);
+      // The command row holds the raw answer for the operator; the charger's
+      // config snapshot is the durable view, so keep it current too.
+      await this.applyConfigurationSideEffects(command, action, parsed.data, response, outcome);
       await completeCommand(this.db, command.id, outcome, { response });
       log.info({ outcome }, 'command answered');
     } catch (err) {
@@ -147,6 +151,50 @@ export class CommandBus {
         error: err instanceof Error ? err.message : String(err),
       });
       log.warn({ err, timedOut }, 'command failed');
+    }
+  }
+
+  /**
+   * GetConfiguration refreshes the whole snapshot; an accepted
+   * ChangeConfiguration (including RebootRequired — the charger has stored it)
+   * updates one key. AuthorizationKey values are redacted either way.
+   */
+  private async applyConfigurationSideEffects(
+    command: RemoteCommandRow,
+    action: RemoteCommandAction,
+    request: unknown,
+    response: unknown,
+    outcome: 'accepted' | 'rejected',
+  ): Promise<void> {
+    if (action === 'GetConfiguration') {
+      const conf = response as {
+        configurationKey?: { key: string; value?: string; readonly?: boolean }[];
+      };
+      const entries = conf?.configurationKey ?? [];
+      if (entries.length === 0) return;
+      const snapshot: Record<string, unknown> = {};
+      for (const entry of entries) {
+        snapshot[entry.key] = ocpp16.isSecretConfigKey(entry.key) ? '[redacted]' : entry.value;
+      }
+      const req = request as { key?: string[] };
+      // A targeted GetConfiguration only answers for the keys asked; merge
+      // rather than replace so the rest of the snapshot survives.
+      await mergeConfigurationSnapshot(this.db, command.charge_point_id, snapshot, {
+        replace: !req.key || req.key.length === 0,
+      });
+      return;
+    }
+
+    if (action === 'ChangeConfiguration') {
+      const status = (response as { status?: string })?.status;
+      if (outcome !== 'accepted' && status !== 'RebootRequired') return;
+      const req = request as { key: string; value: string };
+      await mergeConfigurationSnapshot(
+        this.db,
+        command.charge_point_id,
+        { [req.key]: ocpp16.isSecretConfigKey(req.key) ? '[redacted]' : req.value },
+        { replace: false },
+      );
     }
   }
 

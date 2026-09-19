@@ -161,6 +161,158 @@ describe('cross-tenant isolation on charge_points and id_tags', () => {
   });
 });
 
+describe('issues (operator-writable ticket table)', () => {
+  const CP_A = '66666666-6666-4666-8666-666666666661';
+
+  it('an operator can raise an issue on their own tenant', async () => {
+    const rows = await as(personaA('operator'), async (tx) => {
+      return tx`
+        insert into public.issues (tenant_id, charge_point_id, title, opened_by)
+        values (${TENANT_A}, ${CP_A}, 'Connector stuck', ${USER_A})
+        returning id, status, severity
+      `;
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe('open');
+  });
+
+  it('a viewer cannot raise an issue', async () => {
+    await expect(
+      as(personaA('viewer'), async (tx) => {
+        await tx`
+          insert into public.issues (tenant_id, title, opened_by)
+          values (${TENANT_A}, 'Nope', ${USER_A})
+        `;
+      }),
+    ).rejects.toThrow(/row-level security/);
+  });
+
+  it('opened_by must be the caller', async () => {
+    await expect(
+      as(personaA('admin'), async (tx) => {
+        await tx`
+          insert into public.issues (tenant_id, title, opened_by)
+          values (${TENANT_A}, 'Forged', ${USER_B})
+        `;
+      }),
+    ).rejects.toThrow(/row-level security/);
+  });
+
+  it('tenant B never sees tenant A issues, and cannot touch them', async () => {
+    // Seed one as the owner (a real insert, rolled back with the test).
+    await as(personaA(), async (tx) => {
+      await tx`
+        insert into public.issues (tenant_id, title, opened_by)
+        values (${TENANT_A}, 'Private to A', ${USER_A})
+      `;
+      const seen = await tx`select id from public.issues where title = 'Private to A'`;
+      expect(seen).toHaveLength(1);
+    });
+    const seenByB = await as(
+      personaB,
+      (tx) => tx`select id from public.issues where title = 'Private to A'`,
+    );
+    expect(seenByB).toHaveLength(0);
+  });
+
+  it('only admins may delete', async () => {
+    const deletedByOperator = await as(personaA('operator'), async (tx) => {
+      await tx.unsafe('set local role postgres');
+      await tx`insert into public.issues (tenant_id, title, opened_by) values (${TENANT_A}, 'To delete', ${USER_A})`;
+      await tx.unsafe('set local role authenticated');
+      return tx`delete from public.issues where title = 'To delete' returning id`;
+    });
+    expect(deletedByOperator).toHaveLength(0);
+  });
+});
+
+describe('team management RPCs', () => {
+  it('list_team_members returns only the caller tenant, with emails', async () => {
+    const rows = await as(personaA(), (tx) => tx`select * from public.list_team_members()`);
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    expect(rows.every((r) => typeof r.email === 'string')).toBe(true);
+    expect(rows.some((r) => r.user_id === USER_B)).toBe(false);
+  });
+
+  it('nobody can change their own role', async () => {
+    await expect(
+      as(personaA(), (tx) => tx`select public.set_team_member_role(${USER_A}::uuid, 'viewer')`),
+    ).rejects.toThrow(/own role/);
+  });
+
+  it('a viewer cannot manage the team at all', async () => {
+    await expect(
+      as(personaA('viewer'), (tx) => tx`select public.remove_team_member(${USER_B}::uuid)`),
+    ).rejects.toThrow(/Only owners and admins/);
+  });
+
+  it('an admin cannot act on a member of another tenant', async () => {
+    // USER_B belongs to tenant B; from tenant A they simply do not exist.
+    await expect(
+      as(
+        personaA('admin'),
+        (tx) => tx`select public.set_team_member_role(${USER_B}::uuid, 'viewer')`,
+      ),
+    ).rejects.toThrow(/not a member/);
+  });
+
+  it('the last owner cannot be removed', async () => {
+    // Tenant A has one seeded owner (USER_A). An extra admin trying to remove
+    // them must be refused on the owner rule before anything else.
+    const ADMIN_A = '99999999-9999-4999-8999-999999999993';
+    await expect(
+      as(
+        {
+          role: 'authenticated',
+          claims: {
+            sub: ADMIN_A,
+            role: 'authenticated',
+            app_metadata: { tenant_id: TENANT_A, tenant_role: 'admin' },
+          },
+        },
+        (tx) => tx`select public.remove_team_member(${USER_A}::uuid)`,
+      ),
+    ).rejects.toThrow(/owner/);
+  });
+});
+
+describe('uptime', () => {
+  it('charge_point_uptime is scoped by RLS to the caller tenant', async () => {
+    const rows = await as(personaB, async (tx) => {
+      await tx.unsafe('set local role postgres');
+      await tx`
+        insert into public.charge_point_connection_log (tenant_id, charge_point_id, event, recorded_at)
+        values (${TENANT_A}, '66666666-6666-4666-8666-666666666661', 'connected', now() - interval '2 hours'),
+               (${TENANT_A}, '66666666-6666-4666-8666-666666666661', 'disconnected', now() - interval '1 hour')
+      `;
+      await tx.unsafe('set local role authenticated');
+      return tx`select * from public.charge_point_uptime(interval '1 day')`;
+    });
+    // Tenant A's charger must be invisible; tenant B may legitimately have its
+    // own rows if the OCPP suite is connecting VCP-DEMO-002 at the same time.
+    expect(rows.some((r) => r.charge_point_id === '66666666-6666-4666-8666-666666666661')).toBe(
+      false,
+    );
+  });
+
+  it('computes the online share of the window', async () => {
+    const rows = await as(personaA(), async (tx) => {
+      await tx.unsafe('set local role postgres');
+      await tx`
+        insert into public.charge_point_connection_log (tenant_id, charge_point_id, event, recorded_at)
+        values (${TENANT_A}, '66666666-6666-4666-8666-666666666661', 'connected', now() - interval '4 hours'),
+               (${TENANT_A}, '66666666-6666-4666-8666-666666666661', 'disconnected', now() - interval '1 hour')
+      `;
+      await tx.unsafe('set local role authenticated');
+      return tx`select * from public.charge_point_uptime(interval '1 day')`;
+    });
+    // Window starts at the first connection (4h ago); online for 3 of those 4 hours.
+    const row = rows.find((r) => r.charge_point_id === '66666666-6666-4666-8666-666666666661');
+    expect(row).toBeDefined();
+    expect(Number(row!.uptime_pct)).toBeCloseTo(75, 0);
+  });
+});
+
 describe('tenants table visibility', () => {
   it('a plain member sees only their own tenant row', async () => {
     const rows = await as(personaB, (tx) => tx`select id from public.tenants`);

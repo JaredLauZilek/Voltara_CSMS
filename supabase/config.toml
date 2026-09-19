@@ -416,3 +416,8 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.admin-invite]
+# The function verifies the caller itself (signature via auth.getUser, claims
+# from app_metadata); the gateway check just rejects unsigned requests early.
+verify_jwt = true

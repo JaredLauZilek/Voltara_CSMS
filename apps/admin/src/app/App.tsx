@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { C, NavItem, VoltaraLogo, useViewport } from '@voltara/ui';
 import { supabase } from '@/shared/lib/supabase';
+import { TenantRealtimeProvider, useRealtimeStatus } from '@/shared/realtime';
 import { useAuth } from './auth';
-import { NAV_SECTIONS, ROUTES, titleFor } from './routes';
+import { HOME_PATH, NAV_SECTIONS, ROUTES, titleFor } from './routes';
 
 const COLLAPSED_KEY = 'voltara-csms.nav.collapsed';
 
@@ -26,6 +27,51 @@ function useTenant() {
 }
 
 export function App() {
+  return (
+    <TenantRealtimeProvider>
+      <Shell />
+    </TenantRealtimeProvider>
+  );
+}
+
+/** The live-channel indicator in the topbar: green when subscribed. */
+function LiveDot() {
+  const status = useRealtimeStatus();
+  const color = status === 'live' ? C.green : status === 'error' ? C.error : C.slate;
+  const label =
+    status === 'live' ? 'Live' : status === 'error' ? 'Live updates unavailable' : 'Connecting…';
+  return (
+    <span
+      title={label}
+      style={{
+        marginLeft: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 11,
+        fontWeight: 700,
+        color,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 99,
+          background: color,
+          animation:
+            status === 'connecting' ? 'voltara-pulse 1.4s ease-in-out infinite' : undefined,
+        }}
+      />
+      {status === 'live' ? 'Live' : status === 'error' ? 'Offline' : 'Connecting'}
+    </span>
+  );
+}
+
+function Shell() {
   const { session } = useAuth();
   const { data: tenant } = useTenant();
   const { pathname } = useLocation();
@@ -370,11 +416,12 @@ export function App() {
               {today} · Kuala Lumpur
             </div>
           </div>
+          <LiveDot />
         </header>
 
         <div data-voltara-main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
           <Routes>
-            <Route path="/" element={<Navigate to="/charge-points" replace />} />
+            <Route path="/" element={<Navigate to={HOME_PATH} replace />} />
             {ROUTES.map((r) => (
               <Route key={r.path} path={`${r.path}/*`} element={<r.screen />} />
             ))}

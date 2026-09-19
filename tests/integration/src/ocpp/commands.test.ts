@@ -158,6 +158,82 @@ describe('remote command dispatch', () => {
   });
 });
 
+describe('configuration snapshot via the bus', () => {
+  it('stores what a GetConfiguration answers, with the AuthorizationKey redacted', async () => {
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      handlers: {
+        GetConfiguration: () => ({
+          configurationKey: [
+            { key: 'HeartbeatInterval', readonly: false, value: '120' },
+            { key: 'AuthorizationKey', readonly: false, value: 'super-secret' },
+          ],
+          unknownKey: [],
+        }),
+      },
+    });
+    await charger.call('BootNotification', BOOT);
+
+    const settled = await commandStatus(await queueCommand('GetConfiguration', {}));
+    expect(settled.status).toBe('accepted');
+
+    const [cp] = await sql<{ config: Record<string, unknown> }[]>`
+      select config from public.charge_points where id = ${FIXTURES.chargePointA}
+    `;
+    expect(cp.config.HeartbeatInterval).toBe('120');
+    expect(cp.config.AuthorizationKey).toBe('[redacted]');
+    expect(JSON.stringify(cp.config)).not.toContain('super-secret');
+
+    await charger.close();
+  });
+
+  it('updates one key after an accepted ChangeConfiguration, leaving the rest intact', async () => {
+    await sql`
+      update public.charge_points
+      set config = '{"HeartbeatInterval": "300", "MeterValueSampleInterval": "60"}'::jsonb
+      where id = ${FIXTURES.chargePointA}
+    `;
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      handlers: { ChangeConfiguration: () => ({ status: 'RebootRequired' }) },
+    });
+    await charger.call('BootNotification', BOOT);
+
+    const settled = await commandStatus(
+      await queueCommand('ChangeConfiguration', { key: 'HeartbeatInterval', value: '60' }),
+    );
+    // RebootRequired is a refusal on the wire vocabulary but the charger has
+    // stored the value — the snapshot must say so.
+    expect(settled.status).toBe('rejected');
+
+    const [cp] = await sql<{ config: Record<string, unknown> }[]>`
+      select config from public.charge_points where id = ${FIXTURES.chargePointA}
+    `;
+    expect(cp.config).toEqual({ HeartbeatInterval: '60', MeterValueSampleInterval: '60' });
+
+    await charger.close();
+  });
+
+  it('leaves the snapshot alone when the charger rejects the change', async () => {
+    await sql`
+      update public.charge_points set config = '{"HeartbeatInterval": "300"}'::jsonb
+      where id = ${FIXTURES.chargePointA}
+    `;
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      handlers: { ChangeConfiguration: () => ({ status: 'Rejected' }) },
+    });
+    await charger.call('BootNotification', BOOT);
+
+    await commandStatus(
+      await queueCommand('ChangeConfiguration', { key: 'HeartbeatInterval', value: '10' }),
+    );
+    const [cp] = await sql<{ config: Record<string, unknown> }[]>`
+      select config from public.charge_points where id = ${FIXTURES.chargePointA}
+    `;
+    expect(cp.config).toEqual({ HeartbeatInterval: '300' });
+
+    await charger.close();
+  });
+});
+
 describe('connection registry', () => {
   it('claims the charger for this gateway instance and releases it on close', async () => {
     const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA);

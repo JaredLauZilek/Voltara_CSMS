@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { C, Modal } from '@voltara/ui';
 import { useLocations } from '@/features/locations';
 import { useChargePointWatch, useRegisterChargePoint } from './hooks';
-import { CONNECTOR_TYPES, SECURITY_PROFILES, type RegisteredCharger } from './types';
+import {
+  CONNECTOR_TYPES,
+  SECURITY_PROFILES,
+  gatewayDisplayHost,
+  type RegisteredCharger,
+} from './types';
 
 const GATEWAY_URL =
   (import.meta.env.VITE_GATEWAY_URL as string | undefined) ??
@@ -281,12 +286,11 @@ function CredentialsStep({
   // wss:// URL; a large class (most Chinese AC units) takes host:port/path in
   // one field with a separate TLS toggle supplying the scheme. Show both, with
   // the port explicit — that firmware's parsers often require it.
-  const host = GATEWAY_URL.replace(/^wss?:\/\//, '').replace(/\/$/, '');
   const serverUrl = `${GATEWAY_URL.replace(/\/$/, '')}/ocpp`;
   // Profile 1 forces plaintext; 0 works either way but TLS is recommended when
   // the charger supports it — matching how incumbent networks configure units.
   const plaintext = securityProfile === 1;
-  const hostPortUrl = plaintext ? `${host}:80/ocpp` : `${host}:443/ocpp`;
+  const hostPortUrl = gatewayDisplayHost(GATEWAY_URL, plaintext);
   const noAuth = securityProfile === 0;
 
   return (

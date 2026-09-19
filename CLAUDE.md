@@ -107,7 +107,8 @@ apps/admin/src/
 
 ## §8 Realtime rules
 
-- One private Broadcast channel per tenant: `tenantChannel(tenantId)` → `tenant:{id}`. Events: `cp_status`, `session_update`, `meter` (throttled ≥5s per connector). Payload types come from `@voltara/shared` — never ad-hoc shapes.
+- One private Broadcast channel per tenant: `tenantChannel(tenantId)` → `tenant:{id}`. Events: `cp_status`, `session_update`, `meter` (throttled ≥5s per connector) from the gateway, and `command_update` from a database trigger on `remote_commands`. Payload types come from `@voltara/shared` — never ad-hoc shapes.
+- The admin app opens the channel in exactly one place (`shared/realtime.tsx`, a shell-level provider); features subscribe through `useRealtimeEvent()` and patch their own TanStack caches. Frames (`ocpp_messages`) are never broadcast — log viewers poll.
 - Channel auth = RLS on `realtime.messages` (topic must equal `'tenant:' || jwt_tenant_id()`).
 - **Never use `postgres_changes` for telemetry** (ADR-0003). Low-frequency notifications may use `realtime.send()` from triggers.
 

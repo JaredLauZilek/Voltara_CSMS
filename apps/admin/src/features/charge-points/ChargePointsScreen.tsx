@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, C, KPICard, Toolbar } from '@voltara/ui';
 import { SITE_TYPE_LABELS, formatDateTime, type SiteType } from '@voltara/shared';
-import { useChargePoints } from './hooks';
+import { useChargePoints, useUptime } from './hooks';
 import { ConnectorTile } from './ConnectorTile';
 import { AddChargerModal } from './AddChargerModal';
 import {
@@ -21,9 +21,24 @@ interface SiteGroup {
 
 export function ChargePointsScreen() {
   const { data: chargePoints = [], isLoading } = useChargePoints();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
+  const { data: uptime = [] } = useUptime(30);
+  // Filter and search live in the URL so a filtered view can be shared
+  // ("all faulted chargers") — CLAUDE.md §4.4. The add modal is transient.
+  const [params, setParams] = useSearchParams();
+  const search = params.get('q') ?? '';
+  const rawFilter = params.get('status') ?? 'All';
+  const statusFilter: StatusFilter = (STATUS_FILTERS as readonly string[]).includes(rawFilter)
+    ? (rawFilter as StatusFilter)
+    : 'All';
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(params);
+    if (value && value !== 'All') next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
+  };
   const [showAdd, setShowAdd] = useState(false);
+  const uptimeFor = (id: string) =>
+    uptime.find((u) => u.charge_point_id === id)?.uptime_pct ?? null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -98,9 +113,9 @@ export function ChargePointsScreen() {
       <Toolbar
         filters={[...STATUS_FILTERS]}
         filter={statusFilter}
-        onFilterChange={(f) => setStatusFilter(f as StatusFilter)}
+        onFilterChange={(f) => setParam('status', f)}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(s) => setParam('q', s || null)}
         searchPlaceholder="Search by charger, ID, site or vendor…"
         primaryLabel="+ Add Charger"
         onPrimary={() => setShowAdd(true)}
@@ -141,7 +156,7 @@ export function ChargePointsScreen() {
       )}
 
       {groups.map((group) => (
-        <SiteCard key={group.key} group={group} />
+        <SiteCard key={group.key} group={group} uptimeFor={uptimeFor} />
       ))}
 
       {showAdd && <AddChargerModal onClose={() => setShowAdd(false)} />}
@@ -149,7 +164,13 @@ export function ChargePointsScreen() {
   );
 }
 
-function SiteCard({ group }: { group: SiteGroup }) {
+function SiteCard({
+  group,
+  uptimeFor,
+}: {
+  group: SiteGroup;
+  uptimeFor: (id: string) => number | null;
+}) {
   const navigate = useNavigate();
   const counts = useMemo(() => {
     let points = 0;
@@ -256,6 +277,7 @@ function SiteCard({ group }: { group: SiteGroup }) {
               : cp.connection_state === 'online'
                 ? `online${cp.vendor_reported ? ` · ${cp.vendor_reported}` : ''}`
                 : `last seen ${cp.last_seen_at ? formatDateTime(cp.last_seen_at) : 'never'}`}
+            {uptimeFor(cp.id) !== null ? ` · ${uptimeFor(cp.id)!.toFixed(1)}% uptime` : ''}
           </span>
         ))}
       </div>

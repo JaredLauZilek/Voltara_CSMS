@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@voltara/shared/database.types';
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const rawUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+// A path such as `/supabase` means "same origin, via the dev-server proxy"
+// (see vite.config.ts). Production always sets the absolute project URL.
+const url = rawUrl?.startsWith('/') ? new URL(rawUrl, window.location.origin).href : rawUrl;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 if (!url || !anonKey) {

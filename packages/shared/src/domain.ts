@@ -79,6 +79,48 @@ export const SITE_TYPE_LABELS: Record<SiteType, string> = {
 export const ID_TAG_STATUSES = ['active', 'blocked', 'expired'] as const;
 export type IdTagStatus = (typeof ID_TAG_STATUSES)[number];
 
+export const ID_TAG_KINDS = ['rfid', 'virtual', 'mac'] as const;
+export type IdTagKind = (typeof ID_TAG_KINDS)[number];
+
+export const ISSUE_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+export type IssueSeverity = (typeof ISSUE_SEVERITIES)[number];
+
+export const ISSUE_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const;
+export type IssueStatus = (typeof ISSUE_STATUSES)[number];
+
+export const ISSUE_STATUS_LABELS: Record<IssueStatus, string> = {
+  open: 'Open',
+  in_progress: 'In Progress',
+  resolved: 'Resolved',
+  closed: 'Closed',
+};
+
+export const ISSUE_SEVERITY_LABELS: Record<IssueSeverity, string> = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  critical: 'Critical',
+};
+
+export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
+  pending: 'Pending',
+  active: 'Charging',
+  suspended: 'Suspended',
+  finishing: 'Finishing',
+  completed: 'Completed',
+  faulted: 'Faulted',
+  orphaned: 'Orphaned',
+};
+
+export const COMMAND_STATUS_LABELS: Record<CommandStatus, string> = {
+  queued: 'Queued',
+  sent: 'Sent',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  timeout: 'Timeout',
+  failed: 'Failed',
+};
+
 export const CONNECTOR_TYPES = [
   'Type2',
   'CCS2',

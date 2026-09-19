@@ -6,7 +6,7 @@ The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../
 
 - [x] **Phase 0 — Scaffold, CI, Supabase, tenancy, UI port** · done 26 Jul 2026 (`8cc4d36`)
 - [x] **Phase 1 — OCPP gateway core vs simulator** · done 29 Jul 2026 — 8 charge-point handlers, Security Profile 2 auth, raw frame log with credential redaction, session state machine, batched telemetry with monthly partitions, LISTEN/NOTIFY command bus, quirks layer, 25 scripted-charger scenarios (40 integration tests green)
-- [ ] **Phase 2 — Admin portal charger management** (~3 wk)
+- [x] **Phase 2 — Admin portal charger management** · code complete 19 Sep 2026 — registration wizard, live board + detail page on the tenant Broadcast channel (no polling for status), remote operations over the command bus with live outcomes, config viewer/refresh/set, overview dashboard, sessions with per-minute power/energy charts, global OCPP log, ID tags, issues, uptime, team + `admin-invite`. Remaining gate: the two-browser / two-tenant live proof and the <5-min registration walkthrough against a physical charger (no bench unit available at the time).
 - [ ] **Phase 3 — Tariffs, billing math, CDRs, reports** (~2–3 wk)
 - [ ] **Phase 4 — Driver app MVP (Expo)** (~4–6 wk)
 - [ ] **Phase 5 — Payments (Curlec + DuitNow QR)** (~4 wk)
@@ -15,7 +15,7 @@ The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../
 
 **Staging Supabase:** project `lxsfnqshcacsrolmymsg`, region `ap-southeast-1` (Singapore). All migrations applied, Voltara tenant bootstrapped, JWT claims hook enabled and verified. CI + integration workflows green on `main`.
 
-**Pending one-time manual steps:** create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to auto-deploy · on upgrade to Supabase Pro, enable leaked-password protection (Free-plan gated) · first Fly.io deploy of the gateway is deferred to Phase 1, when there is a real OCPP server worth deploying.
+**Pending one-time manual steps:** **run [docs/runbook-staging-migration-repair.md](runbook-staging-migration-repair.md) before the first `db push`** (staging's migration ledger lists three MCP-applied versions under different numbers from the committed files) · create the `main-protection` branch ruleset in GitHub UI · set `DEPLOY_ENABLED=true` + staging secrets when ready to auto-deploy · on upgrade to Supabase Pro, enable leaked-password protection (Free-plan gated) · first Fly.io deploy of the gateway is deferred to Phase 1, when there is a real OCPP server worth deploying.
 
 ---
 

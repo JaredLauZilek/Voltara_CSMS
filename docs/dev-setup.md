@@ -16,6 +16,12 @@ pnpm dev               # admin on :5173, gateway health on :9221
 
 Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, platform admin) and `ops@democpo.test` / `demo-dev` (Demo CPO — the second tenant that proves isolation). Studio: http://127.0.0.1:54323.
 
+**Codespaces:** the browser runs on your machine, not in the container, so the admin app reaches
+local Supabase through the Vite dev-server proxy (`VITE_SUPABASE_URL=/supabase`) — only port 5173
+needs forwarding. `VITE_DEV_AUTO_LOGIN_EMAIL/_PASSWORD` in `.env.local` skip the login form in dev.
+If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P FORWARD ACCEPT` first
+(a stale legacy firewall table drops container-to-container traffic on fresh codespaces).
+
 ## Everyday commands
 
 | Command                                      | Does                                                                                |
@@ -27,6 +33,7 @@ Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, pl
 | `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                          |
 | `pnpm exec supabase migration new <topic>`   | new migration file                                                                  |
 | `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
+| `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324   |
 
 To put a **real charger** on the platform, see [deploy-gateway.md](deploy-gateway.md) —
 it covers the Fly.io deploy, the charger's settings, and how to confirm it connected.

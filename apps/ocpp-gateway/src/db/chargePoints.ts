@@ -122,6 +122,24 @@ export async function saveConfigurationSnapshot(
   `;
 }
 
+/** Merges keys into the stored snapshot, or replaces it wholesale. */
+export async function mergeConfigurationSnapshot(
+  db: Db,
+  chargePointId: string,
+  config: Record<string, unknown>,
+  options: { replace: boolean },
+): Promise<void> {
+  if (options.replace) {
+    await saveConfigurationSnapshot(db, chargePointId, config);
+    return;
+  }
+  await db`
+    update public.charge_points
+    set config = config || ${db.json(config as never)}
+    where id = ${chargePointId}
+  `;
+}
+
 export interface ConnectorRow {
   id: string;
   evse_id: string;

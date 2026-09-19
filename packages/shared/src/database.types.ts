@@ -660,6 +660,72 @@ export type Database = {
           },
         ]
       }
+      issues: {
+        Row: {
+          assigned_to: string | null
+          charge_point_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          ocpp_connector_id: number | null
+          opened_by: string | null
+          resolved_at: string | null
+          severity: string
+          source: string
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          charge_point_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          ocpp_connector_id?: number | null
+          opened_by?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          charge_point_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          ocpp_connector_id?: number | null
+          opened_by?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issues_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -1084,6 +1150,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      charge_point_uptime: {
+        Args: { p_window?: string }
+        Returns: {
+          charge_point_id: string
+          online_seconds: number
+          uptime_pct: number
+          window_seconds: number
+        }[]
+      }
       create_monthly_partition: {
         Args: { p_month: string; p_table: string }
         Returns: undefined
@@ -1094,6 +1169,16 @@ export type Database = {
       is_tenant_operator: { Args: never; Returns: boolean }
       jwt_tenant_id: { Args: never; Returns: string }
       jwt_tenant_role: { Args: never; Returns: string }
+      list_team_members: {
+        Args: never
+        Returns: {
+          email: string
+          joined_at: string
+          last_sign_in_at: string
+          role: string
+          user_id: string
+        }[]
+      }
       maintain_partitions: {
         Args: {
           p_message_retention_days?: number
@@ -1117,7 +1202,12 @@ export type Database = {
           ocpp_identity: string
         }[]
       }
+      remove_team_member: { Args: { p_user_id: string }; Returns: undefined }
       rollup_meter_values: { Args: { p_since?: string }; Returns: undefined }
+      set_team_member_role: {
+        Args: { p_role: string; p_user_id: string }
+        Returns: undefined
+      }
       sweep_orphaned_sessions: {
         Args: { p_stale_after?: string }
         Returns: number

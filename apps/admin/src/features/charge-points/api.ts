@@ -1,4 +1,5 @@
-// The ONLY place `supabase.from('charge_points' | 'connectors')` may appear.
+// The ONLY place `supabase.from('charge_points' | 'connectors' | 'remote_commands' | …)`
+// may appear for this feature.
 import { supabase } from '@/shared/lib/supabase';
 import type {
   ChargePoint,
@@ -6,7 +7,25 @@ import type {
   ChargePointWithConnectors,
   RegisterChargerInput,
   RegisteredCharger,
+  RemoteCommand,
+  RemoteOpInput,
+  UptimeRow,
 } from './types';
+
+function withRelations(
+  row: ChargePoint & {
+    connectors?: ChargePointWithConnectors['connectors'] | null;
+    locations?: { name: string; site_type: string } | null;
+  },
+): ChargePointWithConnectors {
+  const { connectors, locations, ...cp } = row;
+  return {
+    ...(cp as ChargePoint),
+    connectors: [...(connectors ?? [])].sort((a, b) => a.ocpp_connector_id - b.ocpp_connector_id),
+    location_name: locations?.name ?? null,
+    location_site_type: locations?.site_type ?? null,
+  };
+}
 
 /**
  * One round-trip for the whole board: charge points, their connectors, and the
@@ -18,19 +37,7 @@ export async function listChargePoints(): Promise<ChargePointWithConnectors[]> {
     .select('*, connectors(*), locations(name, site_type)')
     .order('name');
   if (error) throw error;
-
-  return (data ?? []).map((row) => {
-    const { connectors, locations, ...cp } = row as typeof row & {
-      connectors: ChargePointWithConnectors['connectors'];
-      locations: { name: string; site_type: string } | null;
-    };
-    return {
-      ...(cp as ChargePoint),
-      connectors: [...(connectors ?? [])].sort((a, b) => a.ocpp_connector_id - b.ocpp_connector_id),
-      location_name: locations?.name ?? null,
-      location_site_type: locations?.site_type ?? null,
-    };
-  });
+  return (data ?? []).map((row) => withRelations(row as Parameters<typeof withRelations>[0]));
 }
 
 export async function getChargePoint(id: string): Promise<ChargePoint | null> {
@@ -52,17 +59,7 @@ export async function getChargePointDetail(id: string): Promise<ChargePointWithC
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-
-  const { connectors, locations, ...cp } = data as typeof data & {
-    connectors: ChargePointWithConnectors['connectors'];
-    locations: { name: string; site_type: string } | null;
-  };
-  return {
-    ...(cp as ChargePoint),
-    connectors: [...(connectors ?? [])].sort((a, b) => a.ocpp_connector_id - b.ocpp_connector_id),
-    location_name: locations?.name ?? null,
-    location_site_type: locations?.site_type ?? null,
-  };
+  return withRelations(data as Parameters<typeof withRelations>[0]);
 }
 
 export interface ConnectionEvent {
@@ -88,6 +85,27 @@ export async function listConnectionEvents(
   const { data, error } = await supabase
     .from('charge_point_connection_log')
     .select('id, event, close_reason, close_code, remote_address, gateway_instance, recorded_at')
+    .eq('charge_point_id', chargePointId)
+    .order('id', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export interface StatusEvent {
+  id: number;
+  ocpp_connector_id: number;
+  status: string;
+  error_code: string | null;
+  info: string | null;
+  vendor_error_code: string | null;
+  recorded_at: string;
+}
+
+export async function listStatusEvents(chargePointId: string, limit = 50): Promise<StatusEvent[]> {
+  const { data, error } = await supabase
+    .from('charge_point_status_log')
+    .select('id, ocpp_connector_id, status, error_code, info, vendor_error_code, recorded_at')
     .eq('charge_point_id', chargePointId)
     .order('id', { ascending: false })
     .limit(limit);
@@ -165,4 +183,71 @@ export async function updateChargePoint(
 export async function deleteChargePoint(id: string): Promise<void> {
   const { error } = await supabase.from('charge_points').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ── Remote operations (the command bus) ─────────────────────────────────────
+
+/**
+ * Issue a command. The admin app never talks to the gateway: it inserts a row,
+ * the trigger notifies the gateway, and the gateway writes the outcome back
+ * (CLAUDE.md §6). `requested_by` must be the caller — the insert policy checks it.
+ */
+export async function issueRemoteCommand(
+  tenantId: string,
+  userId: string,
+  chargePointId: string,
+  op: RemoteOpInput,
+): Promise<RemoteCommand> {
+  const { data, error } = await supabase
+    .from('remote_commands')
+    .insert({
+      tenant_id: tenantId,
+      charge_point_id: chargePointId,
+      action: op.action,
+      payload: op.payload as never,
+      requested_by: userId,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getRemoteCommand(id: string): Promise<RemoteCommand | null> {
+  const { data, error } = await supabase
+    .from('remote_commands')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function listRecentCommands(
+  chargePointId: string,
+  limit = 20,
+): Promise<RemoteCommand[]> {
+  const { data, error } = await supabase
+    .from('remote_commands')
+    .select('*')
+    .eq('charge_point_id', chargePointId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ── Uptime ──────────────────────────────────────────────────────────────────
+
+export async function listUptime(windowDays: number): Promise<UptimeRow[]> {
+  const { data, error } = await supabase.rpc('charge_point_uptime', {
+    p_window: `${windowDays} days`,
+  });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    charge_point_id: r.charge_point_id,
+    online_seconds: Number(r.online_seconds),
+    window_seconds: Number(r.window_seconds),
+    uptime_pct: r.uptime_pct === null ? null : Number(r.uptime_pct),
+  }));
 }

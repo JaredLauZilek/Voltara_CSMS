@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { C, VoltaraLogo } from '@voltara/ui';
 import { supabase } from '@/shared/lib/supabase';
@@ -11,6 +11,24 @@ interface Props {
 }
 
 /**
+ * Dev-only auto sign-in. Set VITE_DEV_AUTO_LOGIN_EMAIL / _PASSWORD in
+ * `.env.local` (gitignored) to skip the login screen against the local stack.
+ * Double-gated: the variables only exist locally, AND `import.meta.env.DEV`
+ * is false in every production bundle, so this can never fire on a deploy.
+ * It still performs a real sign-in — RLS and the tenant claims hook are
+ * exercised exactly as they are for a human at the form.
+ */
+const DEV_AUTO_LOGIN =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_DEV_AUTO_LOGIN_EMAIL &&
+  import.meta.env.VITE_DEV_AUTO_LOGIN_PASSWORD
+    ? {
+        email: import.meta.env.VITE_DEV_AUTO_LOGIN_EMAIL as string,
+        password: import.meta.env.VITE_DEV_AUTO_LOGIN_PASSWORD as string,
+      }
+    : null;
+
+/**
  * Real Supabase Auth (unlike the accounting dashboard's PasswordGate). Renders:
  *  - LoginScreen while signed out,
  *  - a "no tenant" notice when the JWT carries no tenant claim (user exists
@@ -20,9 +38,20 @@ interface Props {
 export function AuthGate({ children }: Props) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Once per page load: after an explicit sign-out the form must stay visible,
+  // otherwise "Sign out" in dev would just bounce straight back in.
+  const autoLoginTried = useRef(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session && DEV_AUTO_LOGIN && !autoLoginTried.current) {
+        autoLoginTried.current = true;
+        const { data: signedIn, error } = await supabase.auth.signInWithPassword(DEV_AUTO_LOGIN);
+        if (error) console.warn('dev auto-login failed — showing the login form:', error.message);
+        setSession(signedIn?.session ?? null);
+        setLoading(false);
+        return;
+      }
       setSession(data.session);
       setLoading(false);
     });
