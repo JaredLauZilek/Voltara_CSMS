@@ -176,6 +176,6 @@ The accounting dashboard's CLAUDE.md rotted exactly where it enumerated volatile
 
 1. **This file holds durable contracts only.** Anything enumerable from the filesystem or git is banned from it.
 2. **Per-package contracts:** `apps/ocpp-gateway/CLAUDE.md` (protocol/state-machine detail) and `packages/ui/CLAUDE.md` (component API). The driver app gets one when it lands. Root links; it does not duplicate.
-3. **Decisions with alternatives go to `docs/adr/NNNN-*.md`** (0001 monorepo, 0002 gateway DB client, 0003 broadcast, 0004 migrations so far). An ADR is written when a choice forecloses others, not for routine work.
+3. **Decisions with alternatives go to `docs/adr/NNNN-*.md`** (0001 monorepo, 0002 gateway DB client, 0003 broadcast, 0004 migrations, 0005 payments provider, 0006 tariff/CDR model so far). An ADR is written when a choice forecloses others, not for routine work.
 4. **A PR that changes a contract updates the relevant CLAUDE.md section in the same PR** — enforced by the PR-template checkbox.
 5. **Quarterly stale-sweep:** read this file top to bottom; any section found stale twice in a row is either fixed structurally (moved to ADR/docs) or deleted. A wrong contract is worse than no contract.
