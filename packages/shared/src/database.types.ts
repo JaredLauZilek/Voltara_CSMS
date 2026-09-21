@@ -81,6 +81,281 @@ export type Database = {
           },
         ]
       }
+      billing_accounts: {
+        Row: {
+          address: string | null
+          billing_model: string
+          business_registration_no: string | null
+          created_at: string
+          email: string | null
+          id: string
+          kind: string
+          legal_name: string | null
+          location_id: string | null
+          name: string
+          notes: string | null
+          per_driver_cap_sen: number | null
+          phone: string | null
+          pool_cap_sen: number | null
+          provider_customer_id: string | null
+          sst_registration_no: string | null
+          status: string
+          tax_identification_no: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          billing_model?: string
+          business_registration_no?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind?: string
+          legal_name?: string | null
+          location_id?: string | null
+          name: string
+          notes?: string | null
+          per_driver_cap_sen?: number | null
+          phone?: string | null
+          pool_cap_sen?: number | null
+          provider_customer_id?: string | null
+          sst_registration_no?: string | null
+          status?: string
+          tax_identification_no?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          billing_model?: string
+          business_registration_no?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          kind?: string
+          legal_name?: string | null
+          location_id?: string | null
+          name?: string
+          notes?: string | null
+          per_driver_cap_sen?: number | null
+          phone?: string | null
+          pool_cap_sen?: number | null
+          provider_customer_id?: string | null
+          sst_registration_no?: string | null
+          status?: string
+          tax_identification_no?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_accounts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_accounts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cdrs: {
+        Row: {
+          auth_method: string
+          billable: boolean
+          billing_account_id: string | null
+          charge_point_id: string | null
+          charging_periods: Json
+          charging_session_id: string | null
+          created_at: string
+          credit: boolean
+          credit_reference_id: string | null
+          currency: string
+          driver_group_id: string | null
+          end_at: string
+          id: string
+          id_tag: string | null
+          invoice_document_id: string | null
+          lines: Json
+          location_id: string | null
+          ocpp_connector_id: number | null
+          ocpp_identity: string | null
+          remark: string | null
+          start_at: string
+          subtotal_sen: number
+          tariff_id: string | null
+          tariff_snapshot: Json | null
+          tariff_version_id: string | null
+          tax_rate_bps: number
+          tax_sen: number
+          tenant_id: string
+          total_energy_cost_sen: number
+          total_energy_wh: number
+          total_fixed_cost_sen: number
+          total_parking_cost_sen: number
+          total_parking_time_s: number
+          total_sen: number
+          total_time_cost_sen: number
+          total_time_s: number
+          unbillable_reason: string | null
+        }
+        Insert: {
+          auth_method?: string
+          billable?: boolean
+          billing_account_id?: string | null
+          charge_point_id?: string | null
+          charging_periods?: Json
+          charging_session_id?: string | null
+          created_at?: string
+          credit?: boolean
+          credit_reference_id?: string | null
+          currency?: string
+          driver_group_id?: string | null
+          end_at: string
+          id?: string
+          id_tag?: string | null
+          invoice_document_id?: string | null
+          lines?: Json
+          location_id?: string | null
+          ocpp_connector_id?: number | null
+          ocpp_identity?: string | null
+          remark?: string | null
+          start_at: string
+          subtotal_sen?: number
+          tariff_id?: string | null
+          tariff_snapshot?: Json | null
+          tariff_version_id?: string | null
+          tax_rate_bps?: number
+          tax_sen?: number
+          tenant_id: string
+          total_energy_cost_sen?: number
+          total_energy_wh?: number
+          total_fixed_cost_sen?: number
+          total_parking_cost_sen?: number
+          total_parking_time_s?: number
+          total_sen?: number
+          total_time_cost_sen?: number
+          total_time_s?: number
+          unbillable_reason?: string | null
+        }
+        Update: {
+          auth_method?: string
+          billable?: boolean
+          billing_account_id?: string | null
+          charge_point_id?: string | null
+          charging_periods?: Json
+          charging_session_id?: string | null
+          created_at?: string
+          credit?: boolean
+          credit_reference_id?: string | null
+          currency?: string
+          driver_group_id?: string | null
+          end_at?: string
+          id?: string
+          id_tag?: string | null
+          invoice_document_id?: string | null
+          lines?: Json
+          location_id?: string | null
+          ocpp_connector_id?: number | null
+          ocpp_identity?: string | null
+          remark?: string | null
+          start_at?: string
+          subtotal_sen?: number
+          tariff_id?: string | null
+          tariff_snapshot?: Json | null
+          tariff_version_id?: string | null
+          tax_rate_bps?: number
+          tax_sen?: number
+          tenant_id?: string
+          total_energy_cost_sen?: number
+          total_energy_wh?: number
+          total_fixed_cost_sen?: number
+          total_parking_cost_sen?: number
+          total_parking_time_s?: number
+          total_sen?: number
+          total_time_cost_sen?: number
+          total_time_s?: number
+          unbillable_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cdrs_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_charging_session_id_fkey"
+            columns: ["charging_session_id"]
+            isOneToOne: false
+            referencedRelation: "charging_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_credit_reference_id_fkey"
+            columns: ["credit_reference_id"]
+            isOneToOne: false
+            referencedRelation: "cdrs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_invoice_document_fk"
+            columns: ["invoice_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_tariff_id_fkey"
+            columns: ["tariff_id"]
+            isOneToOne: false
+            referencedRelation: "tariffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_tariff_version_id_fkey"
+            columns: ["tariff_version_id"]
+            isOneToOne: false
+            referencedRelation: "tariff_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cdrs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charge_point_connection_log: {
         Row: {
           charge_point_id: string
@@ -391,16 +666,20 @@ export type Database = {
         Row: {
           amount_gross: number | null
           amount_tax: number | null
+          billing_account_id: string | null
           charge_point_id: string
+          charging_ended_at: string | null
           connector_id: string | null
           created_at: string
           currency: string | null
+          driver_group_id: string | null
           ended_at: string | null
           energy_wh: number | null
           evse_id: string | null
           id: string
           id_tag: string | null
           id_tag_id: string | null
+          idle_seconds: number | null
           meter_start_wh: number | null
           meter_stop_wh: number | null
           ocpp_connector_id: number
@@ -413,22 +692,27 @@ export type Database = {
           stop_id_tag: string | null
           stop_reason: string | null
           tariff_snapshot: Json | null
+          tariff_version_id: string | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
           amount_gross?: number | null
           amount_tax?: number | null
+          billing_account_id?: string | null
           charge_point_id: string
+          charging_ended_at?: string | null
           connector_id?: string | null
           created_at?: string
           currency?: string | null
+          driver_group_id?: string | null
           ended_at?: string | null
           energy_wh?: number | null
           evse_id?: string | null
           id?: string
           id_tag?: string | null
           id_tag_id?: string | null
+          idle_seconds?: number | null
           meter_start_wh?: number | null
           meter_stop_wh?: number | null
           ocpp_connector_id: number
@@ -441,22 +725,27 @@ export type Database = {
           stop_id_tag?: string | null
           stop_reason?: string | null
           tariff_snapshot?: Json | null
+          tariff_version_id?: string | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
           amount_gross?: number | null
           amount_tax?: number | null
+          billing_account_id?: string | null
           charge_point_id?: string
+          charging_ended_at?: string | null
           connector_id?: string | null
           created_at?: string
           currency?: string | null
+          driver_group_id?: string | null
           ended_at?: string | null
           energy_wh?: number | null
           evse_id?: string | null
           id?: string
           id_tag?: string | null
           id_tag_id?: string | null
+          idle_seconds?: number | null
           meter_start_wh?: number | null
           meter_stop_wh?: number | null
           ocpp_connector_id?: number
@@ -469,10 +758,18 @@ export type Database = {
           stop_id_tag?: string | null
           stop_reason?: string | null
           tariff_snapshot?: Json | null
+          tariff_version_id?: string | null
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "charging_sessions_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "charging_sessions_charge_point_id_fkey"
             columns: ["charge_point_id"]
@@ -488,6 +785,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "charging_sessions_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "charging_sessions_evse_id_fkey"
             columns: ["evse_id"]
             isOneToOne: false
@@ -499,6 +803,13 @@ export type Database = {
             columns: ["id_tag_id"]
             isOneToOne: false
             referencedRelation: "id_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charging_sessions_tariff_version_id_fkey"
+            columns: ["tariff_version_id"]
+            isOneToOne: false
+            referencedRelation: "tariff_versions"
             referencedColumns: ["id"]
           },
           {
@@ -574,6 +885,245 @@ export type Database = {
           },
         ]
       }
+      document_sequences: {
+        Row: {
+          kind: string
+          next: number
+          period: string
+          tenant_id: string
+        }
+        Insert: {
+          kind: string
+          next?: number
+          period: string
+          tenant_id: string
+        }
+        Update: {
+          kind?: string
+          next?: number
+          period?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_sequences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          billing_account_id: string | null
+          buyer: Json
+          created_at: string
+          created_by: string | null
+          currency: string
+          due_at: string | null
+          einvoice_status: string
+          einvoice_uuid: string | null
+          id: string
+          issued_at: string | null
+          kind: string
+          lines: Json
+          location_id: string | null
+          number: string
+          pdf_path: string | null
+          period_end: string | null
+          period_start: string | null
+          references_document_id: string | null
+          seller: Json
+          status: string
+          subtotal_sen: number
+          tax_sen: number
+          tax_summary: Json
+          tenant_id: string
+          total_sen: number
+          updated_at: string
+        }
+        Insert: {
+          billing_account_id?: string | null
+          buyer?: Json
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_at?: string | null
+          einvoice_status?: string
+          einvoice_uuid?: string | null
+          id?: string
+          issued_at?: string | null
+          kind: string
+          lines?: Json
+          location_id?: string | null
+          number: string
+          pdf_path?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          references_document_id?: string | null
+          seller?: Json
+          status?: string
+          subtotal_sen?: number
+          tax_sen?: number
+          tax_summary?: Json
+          tenant_id: string
+          total_sen?: number
+          updated_at?: string
+        }
+        Update: {
+          billing_account_id?: string | null
+          buyer?: Json
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          due_at?: string | null
+          einvoice_status?: string
+          einvoice_uuid?: string | null
+          id?: string
+          issued_at?: string | null
+          kind?: string
+          lines?: Json
+          location_id?: string | null
+          number?: string
+          pdf_path?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          references_document_id?: string | null
+          seller?: Json
+          status?: string
+          subtotal_sen?: number
+          tax_sen?: number
+          tax_summary?: Json
+          tenant_id?: string
+          total_sen?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_references_document_id_fkey"
+            columns: ["references_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_group_members: {
+        Row: {
+          billing_account_id: string | null
+          created_at: string
+          driver_group_id: string
+          driver_user_id: string | null
+          id: string
+          id_tag_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          billing_account_id?: string | null
+          created_at?: string
+          driver_group_id: string
+          driver_user_id?: string | null
+          id?: string
+          id_tag_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          billing_account_id?: string | null
+          created_at?: string
+          driver_group_id?: string
+          driver_user_id?: string | null
+          id?: string
+          id_tag_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_group_members_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_group_members_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_group_members_id_tag_id_fkey"
+            columns: ["id_tag_id"]
+            isOneToOne: false
+            referencedRelation: "id_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_group_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evses: {
         Row: {
           charge_point_id: string
@@ -615,6 +1165,7 @@ export type Database = {
       }
       id_tags: {
         Row: {
+          billing_account_id: string | null
           created_at: string
           driver_user_id: string | null
           expires_at: string | null
@@ -627,6 +1178,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          billing_account_id?: string | null
           created_at?: string
           driver_user_id?: string | null
           expires_at?: string | null
@@ -639,6 +1191,7 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          billing_account_id?: string | null
           created_at?: string
           driver_user_id?: string | null
           expires_at?: string | null
@@ -651,6 +1204,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "id_tags_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "id_tags_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1071,36 +1631,364 @@ export type Database = {
           },
         ]
       }
+      site_host_agreements: {
+        Row: {
+          created_at: string
+          electricity_basis: string
+          electricity_sen_per_kwh: number
+          fixed_monthly_fee_sen: number
+          host_account_id: string
+          id: string
+          location_id: string
+          notes: string | null
+          revenue_share_bps_ac: number
+          revenue_share_bps_dc: number
+          tenant_id: string
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string
+          electricity_basis?: string
+          electricity_sen_per_kwh?: number
+          fixed_monthly_fee_sen?: number
+          host_account_id: string
+          id?: string
+          location_id: string
+          notes?: string | null
+          revenue_share_bps_ac?: number
+          revenue_share_bps_dc?: number
+          tenant_id: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string
+          electricity_basis?: string
+          electricity_sen_per_kwh?: number
+          fixed_monthly_fee_sen?: number
+          host_account_id?: string
+          id?: string
+          location_id?: string
+          notes?: string | null
+          revenue_share_bps_ac?: number
+          revenue_share_bps_dc?: number
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_host_agreements_host_account_id_fkey"
+            columns: ["host_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_host_agreements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_host_agreements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tariff_assignments: {
+        Row: {
+          audience: string
+          charge_point_id: string | null
+          connector_id: string | null
+          created_at: string
+          driver_group_id: string | null
+          id: string
+          location_id: string | null
+          priority: number
+          scope_type: string
+          tariff_id: string
+          tenant_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          audience?: string
+          charge_point_id?: string | null
+          connector_id?: string | null
+          created_at?: string
+          driver_group_id?: string | null
+          id?: string
+          location_id?: string | null
+          priority?: number
+          scope_type: string
+          tariff_id: string
+          tenant_id: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Update: {
+          audience?: string
+          charge_point_id?: string | null
+          connector_id?: string | null
+          created_at?: string
+          driver_group_id?: string | null
+          id?: string
+          location_id?: string | null
+          priority?: number
+          scope_type?: string
+          tariff_id?: string
+          tenant_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_assignments_charge_point_id_fkey"
+            columns: ["charge_point_id"]
+            isOneToOne: false
+            referencedRelation: "charge_points"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_assignments_connector_id_fkey"
+            columns: ["connector_id"]
+            isOneToOne: false
+            referencedRelation: "connectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_assignments_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_assignments_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_assignments_tariff_id_fkey"
+            columns: ["tariff_id"]
+            isOneToOne: false
+            referencedRelation: "tariffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tariff_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_text: string | null
+          elements: Json
+          id: string
+          max_price_sen: number | null
+          min_price_sen: number | null
+          tariff_id: string
+          tax_included: boolean
+          tax_profile_id: string | null
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_text?: string | null
+          elements: Json
+          id?: string
+          max_price_sen?: number | null
+          min_price_sen?: number | null
+          tariff_id: string
+          tax_included?: boolean
+          tax_profile_id?: string | null
+          tenant_id: string
+          version: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_text?: string | null
+          elements?: Json
+          id?: string
+          max_price_sen?: number | null
+          min_price_sen?: number | null
+          tariff_id?: string
+          tax_included?: boolean
+          tax_profile_id?: string | null
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_versions_tariff_id_fkey"
+            columns: ["tariff_id"]
+            isOneToOne: false
+            referencedRelation: "tariffs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_versions_tax_profile_id_fkey"
+            columns: ["tax_profile_id"]
+            isOneToOne: false
+            referencedRelation: "tax_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tariffs: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariffs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_profiles: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          rate_bps: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          rate_bps?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          rate_bps?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
+          address: string | null
           app_name: string | null
+          business_registration_no: string | null
           default_currency: string
+          legal_name: string | null
           logo_path: string | null
+          payment_provider: string | null
           sst_registration_no: string | null
           support_email: string | null
           support_phone: string | null
+          tax_identification_no: string | null
           tenant_id: string
           theme: Json
           updated_at: string
         }
         Insert: {
+          address?: string | null
           app_name?: string | null
+          business_registration_no?: string | null
           default_currency?: string
+          legal_name?: string | null
           logo_path?: string | null
+          payment_provider?: string | null
           sst_registration_no?: string | null
           support_email?: string | null
           support_phone?: string | null
+          tax_identification_no?: string | null
           tenant_id: string
           theme?: Json
           updated_at?: string
         }
         Update: {
+          address?: string | null
           app_name?: string | null
+          business_registration_no?: string | null
           default_currency?: string
+          legal_name?: string | null
           logo_path?: string | null
+          payment_provider?: string | null
           sst_registration_no?: string | null
           support_email?: string | null
           support_phone?: string | null
+          tax_identification_no?: string | null
           tenant_id?: string
           theme?: Json
           updated_at?: string
@@ -1145,6 +2033,110 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          event: string
+          id: string
+          last_error: string | null
+          last_status_code: number | null
+          next_attempt_at: string
+          payload: Json
+          status: string
+          tenant_id: string
+          webhook_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          event: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          payload: Json
+          status?: string
+          tenant_id: string
+          webhook_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          event?: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          payload?: Json
+          status?: string
+          tenant_id?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          events: string[]
+          id: string
+          secret: string
+          tenant_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          events?: string[]
+          id?: string
+          secret: string
+          tenant_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          events?: string[]
+          id?: string
+          secret?: string
+          tenant_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1187,6 +2179,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      next_document_number: {
+        Args: { p_at?: string; p_kind: string }
+        Returns: string
+      }
+      next_tariff_version: { Args: { p_tariff_id: string }; Returns: number }
       register_charge_point: {
         Args: {
           p_connector_count?: number

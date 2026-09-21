@@ -313,6 +313,158 @@ describe('uptime', () => {
   });
 });
 
+describe('billing core (Phase 3)', () => {
+  const ELEMENTS = [{ price_components: [{ type: 'ENERGY', price_sen: 120, step_size: 1 }] }];
+
+  it('an admin can create a tariff and its first version; a viewer cannot', async () => {
+    const created = await as(personaA('admin'), async (tx) => {
+      const [t] =
+        await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Standard') returning id`;
+      const [v] = await tx`
+        insert into public.tariff_versions (tenant_id, tariff_id, version, elements, created_by)
+        values (${TENANT_A}, ${t.id}, public.next_tariff_version(${t.id}::uuid), ${tx.json(ELEMENTS as never)}, ${USER_A})
+        returning version
+      `;
+      return v.version;
+    });
+    expect(created).toBe(1);
+    await expect(
+      as(
+        personaA('viewer'),
+        (tx) => tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Nope')`,
+      ),
+    ).rejects.toThrow(/row-level security/);
+  });
+
+  it('tariff versions are immutable even for the table owner', async () => {
+    await expect(
+      as(personaA(), async (tx) => {
+        const [t] =
+          await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Immutable') returning id`;
+        const [v] = await tx`
+          insert into public.tariff_versions (tenant_id, tariff_id, version, elements, created_by)
+          values (${TENANT_A}, ${t.id}, 1, ${tx.json(ELEMENTS as never)}, ${USER_A}) returning id
+        `;
+        await tx.unsafe('set local role postgres');
+        await tx`update public.tariff_versions set display_text = 'edited' where id = ${v.id}`;
+      }),
+    ).rejects.toThrow(/immutable/);
+  });
+
+  it('tenant B cannot see tenant A tariffs, groups or billing accounts', async () => {
+    await as(personaA(), async (tx) => {
+      await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Private')`;
+      await tx`insert into public.driver_groups (tenant_id, name) values (${TENANT_A}, 'Residents')`;
+      await tx`insert into public.billing_accounts (tenant_id, name) values (${TENANT_A}, 'JMB Vantage')`;
+      const mine = await tx`select count(*)::int as n from public.tariffs where name = 'Private'`;
+      expect(mine[0].n).toBe(1);
+    });
+    const theirs = await as(personaB, async (tx) => ({
+      tariffs: await tx`select 1 from public.tariffs where name = 'Private'`,
+      groups: await tx`select 1 from public.driver_groups where name = 'Residents'`,
+      accounts: await tx`select 1 from public.billing_accounts where name = 'JMB Vantage'`,
+    }));
+    expect(theirs.tariffs).toHaveLength(0);
+    expect(theirs.groups).toHaveLength(0);
+    expect(theirs.accounts).toHaveLength(0);
+  });
+
+  it('CDRs are select-only for tenant users and immutable except the invoice link', async () => {
+    const cdrId = await as(personaA(), async (tx) => {
+      await tx.unsafe('set local role postgres');
+      const [c] = await tx`
+        insert into public.cdrs (tenant_id, start_at, end_at, total_energy_wh, subtotal_sen, total_sen)
+        values (${TENANT_A}, now() - interval '1 hour', now(), 5000, 600, 600) returning id
+      `;
+      await tx.unsafe('set local role authenticated');
+      // A signed-in admin cannot insert a CDR — only the gateway writes them.
+      await expect(
+        tx`insert into public.cdrs (tenant_id, start_at, end_at) values (${TENANT_A}, now(), now())`,
+      ).rejects.toThrow(/row-level security/);
+      return c.id as string;
+    });
+    expect(cdrId).toBeTruthy();
+
+    await expect(
+      as(personaA(), async (tx) => {
+        await tx.unsafe('set local role postgres');
+        const [c] = await tx`
+          insert into public.cdrs (tenant_id, start_at, end_at, total_sen) values (${TENANT_A}, now(), now(), 100) returning id
+        `;
+        await tx`update public.cdrs set total_sen = 1 where id = ${c.id}`;
+      }),
+    ).rejects.toThrow(/immutable/);
+
+    await expect(
+      as(personaA(), async (tx) => {
+        await tx.unsafe('set local role postgres');
+        const [c] = await tx`
+          insert into public.cdrs (tenant_id, start_at, end_at, total_sen) values (${TENANT_A}, now(), now(), 100) returning id
+        `;
+        await tx`delete from public.cdrs where id = ${c.id}`;
+      }),
+    ).rejects.toThrow(/credit CDR/);
+  });
+
+  it('document numbers are per tenant, per kind, per month, and gap-free', async () => {
+    const numbers = await as(personaA(), async (tx) => [
+      (
+        await tx`select public.next_document_number('invoice', '2026-09-21T10:00:00+08'::timestamptz) as n`
+      )[0].n,
+      (
+        await tx`select public.next_document_number('invoice', '2026-09-21T10:00:00+08'::timestamptz) as n`
+      )[0].n,
+      (
+        await tx`select public.next_document_number('receipt', '2026-09-21T10:00:00+08'::timestamptz) as n`
+      )[0].n,
+    ]);
+    expect(numbers).toEqual(['INV-202609-0001', 'INV-202609-0002', 'R-202609-0001']);
+    const other = await as(
+      personaB,
+      (tx) =>
+        tx`select public.next_document_number('invoice', '2026-09-21T10:00:00+08'::timestamptz) as n`,
+    );
+    expect(other[0].n).toBe('INV-202609-0001');
+  });
+
+  it('an issued document is frozen; a draft is editable', async () => {
+    await expect(
+      as(personaA('admin'), async (tx) => {
+        const [d] = await tx`
+          insert into public.documents (tenant_id, kind, number, status, total_sen, created_by, issued_at)
+          values (${TENANT_A}, 'invoice', 'INV-TEST-0001', 'issued', 1000, ${USER_A}, now()) returning id
+        `;
+        await tx`update public.documents set total_sen = 999 where id = ${d.id}`;
+      }),
+    ).rejects.toThrow(/immutable/);
+    const ok = await as(personaA('admin'), async (tx) => {
+      const [d] = await tx`
+        insert into public.documents (tenant_id, kind, number, status, total_sen, created_by)
+        values (${TENANT_A}, 'invoice', 'INV-TEST-0002', 'draft', 1000, ${USER_A}) returning id
+      `;
+      return tx`update public.documents set total_sen = 999, status = 'issued', issued_at = now() where id = ${d.id} returning total_sen`;
+    });
+    expect(Number(ok[0].total_sen)).toBe(999);
+  });
+
+  it('assignment shape is enforced: a group audience needs a group, a location scope needs a location', async () => {
+    await expect(
+      as(personaA('admin'), async (tx) => {
+        const [t] =
+          await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Shape') returning id`;
+        await tx`insert into public.tariff_assignments (tenant_id, tariff_id, scope_type, audience) values (${TENANT_A}, ${t.id}, 'location', 'all')`;
+      }),
+    ).rejects.toThrow(/check constraint/);
+    await expect(
+      as(personaA('admin'), async (tx) => {
+        const [t] =
+          await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Shape2') returning id`;
+        await tx`insert into public.tariff_assignments (tenant_id, tariff_id, scope_type, audience) values (${TENANT_A}, ${t.id}, 'tenant', 'group')`;
+      }),
+    ).rejects.toThrow(/check constraint/);
+  });
+});
+
 describe('tenants table visibility', () => {
   it('a plain member sees only their own tenant row', async () => {
     const rows = await as(personaB, (tx) => tx`select id from public.tenants`);
