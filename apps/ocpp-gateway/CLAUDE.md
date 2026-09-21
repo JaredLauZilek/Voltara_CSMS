@@ -28,6 +28,7 @@ src/
 9. **Tenant scoping:** this service uses the service role / direct Postgres and bypasses RLS. Every query must be scoped by the tenant resolved from the charge point. No cross-tenant joins, ever.
 10. **Logging:** pino with bound fields `{ cp, tenant, action, msgId }`. Never log credentials or full Authorize idTags at info level.
 11. **Graceful deploys:** SIGTERM → stop accepting sockets, flush batched writers, close. Chargers reconnect; that is by design. Never scale to zero.
+12. **Billing (Phase 3):** the tariff is resolved and **frozen into `charging_sessions.tariff_snapshot` at StartTransaction** (`db/billing.ts` — payer from the ID tag, driver groups, most specific assignment wins); nothing after that instant may change a running session's price. StatusNotification maintains `charging_ended_at` (idle starts at the last exit from Charging). StopTransaction flushes the meter writer, then closes the session, inserts final samples, **prices the session with `@voltara/shared` `billing.priceSession`, and inserts the CDR — all in one transaction**. A session without a tariff or an orphaned stop still gets a CDR, flagged `billable = false` with a reason. CDRs are never updated; corrections are credit CDRs. `session.completed` webhooks fire after commit and are never awaited by a handler.
 
 ## Testing
 

@@ -162,3 +162,31 @@ insert into public.connectors (
 
 insert into public.id_tags (tenant_id, tag, label, kind) values
   ('11111111-1111-4111-8111-111111111111', 'VLT-TAG-0001', 'Jared — test card', 'rfid');
+
+-- ── Phase 3 billing (local dev + integration fixtures) ─────────────────────
+-- Voltara: SST at 0% with the machinery live; one "Standard" tariff at
+-- RM 1.20/kWh with idle RM 1/min after 15 minutes, assigned tenant-wide.
+-- Prices are integer sen per OCPP unit: 120 sen/kWh · 6000 sen/hour.
+
+insert into public.tax_profiles (id, tenant_id, name, code, rate_bps, is_default) values
+  ('aaaa0001-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'SST — not yet applicable', 'SST', 0, true),
+  ('aaaa0001-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'SST — not yet applicable', 'SST', 0, true);
+
+insert into public.tariffs (id, tenant_id, name, description, status) values
+  ('aaaa0002-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Standard',
+   'RM 1.20/kWh · idle RM 1/min after 15 min', 'active'),
+  ('aaaa0002-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'Demo public',
+   'RM 1.50/kWh', 'active');
+
+insert into public.tariff_versions (id, tenant_id, tariff_id, version, elements, tax_included, tax_profile_id, display_text, created_by) values
+  ('aaaa0003-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'aaaa0002-0000-4000-8000-000000000001', 1,
+   '[{"price_components":[{"type":"ENERGY","price_sen":120,"step_size":1}]},
+     {"price_components":[{"type":"PARKING_TIME","price_sen":6000,"step_size":60}],"restrictions":{"grace_period_s":900}}]'::jsonb,
+   true, 'aaaa0001-0000-4000-8000-000000000001', 'RM 1.20/kWh · idle RM 1/min after 15 min', '99999999-9999-4999-8999-999999999991'),
+  ('aaaa0003-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'aaaa0002-0000-4000-8000-000000000002', 1,
+   '[{"price_components":[{"type":"ENERGY","price_sen":150,"step_size":1}]}]'::jsonb,
+   true, 'aaaa0001-0000-4000-8000-000000000002', 'RM 1.50/kWh', '99999999-9999-4999-8999-999999999992');
+
+insert into public.tariff_assignments (id, tenant_id, tariff_id, scope_type, audience, priority) values
+  ('aaaa0004-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'aaaa0002-0000-4000-8000-000000000001', 'tenant', 'all', 0),
+  ('aaaa0004-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'aaaa0002-0000-4000-8000-000000000002', 'tenant', 'all', 0);

@@ -31,6 +31,11 @@ export const FIXTURES = {
   keyB: 'demo-charger-key-002',
   keyRetired: 'demo-charger-key-003',
   idTag: 'VLT-TAG-0001',
+  // Phase 3 billing fixtures (supabase/seed.sql): RM 1.20/kWh, idle RM 1/min after 15 min.
+  tariffA: 'aaaa0002-0000-4000-8000-000000000001',
+  tariffVersionA: 'aaaa0003-0000-4000-8000-000000000001',
+  assignmentA: 'aaaa0004-0000-4000-8000-000000000001',
+  taxProfileA: 'aaaa0001-0000-4000-8000-000000000001',
 } as const;
 
 export const sql = postgres(DB_URL, { max: 4, onnotice: () => {} });
@@ -132,7 +137,24 @@ export async function waitFor<T>(
 
 export async function resetChargerState(): Promise<void> {
   // Order respects foreign keys; charge_points/connectors survive because they
-  // are fixtures, not test output.
+  // are fixtures, not test output. CDRs and tariff versions are immutable by
+  // trigger — test cleanup is the one place that may bypass that, and only as
+  // the superuser the harness connects as.
+  await sql`alter table public.cdrs disable trigger cdrs_immutable`;
+  await sql`delete from public.cdrs`;
+  await sql`alter table public.cdrs enable trigger cdrs_immutable`;
+  await sql`delete from public.webhook_deliveries`;
+  await sql`delete from public.webhooks`;
+  await sql`delete from public.documents`;
+  await sql`delete from public.driver_group_members`;
+  await sql`delete from public.driver_groups`;
+  await sql`delete from public.tariff_assignments where id not in ('aaaa0004-0000-4000-8000-000000000001', 'aaaa0004-0000-4000-8000-000000000002')`;
+  await sql`alter table public.tariff_versions disable trigger tariff_versions_immutable`;
+  await sql`delete from public.tariff_versions where id not in ('aaaa0003-0000-4000-8000-000000000001', 'aaaa0003-0000-4000-8000-000000000002')`;
+  await sql`alter table public.tariff_versions enable trigger tariff_versions_immutable`;
+  await sql`delete from public.tariffs where id not in ('aaaa0002-0000-4000-8000-000000000001', 'aaaa0002-0000-4000-8000-000000000002')`;
+  await sql`delete from public.billing_accounts`;
+  await sql`update public.id_tags set billing_account_id = null`;
   await sql`delete from public.meter_values_agg_1m`;
   await sql`delete from public.meter_values`;
   await sql`delete from public.charging_sessions`;

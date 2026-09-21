@@ -1,4 +1,4 @@
-import { ocpp16, type ConnectorStatus } from '@voltara/shared';
+import { billing, ocpp16, type ConnectorStatus } from '@voltara/shared';
 import type { GatewayConfig } from '../../config.js';
 import type { Logger } from '../../logger.js';
 import type { Db } from '../../db/client.js';
@@ -10,6 +10,13 @@ import {
   updateConnectorStatus,
 } from '../../db/chargePoints.js';
 import { insertStatusLog } from '../../db/logs.js';
+import {
+  applySessionCost,
+  insertCdr,
+  listEnergySamples,
+  markChargingEnded,
+  resolveTariff,
+} from '../../db/billing.js';
 import {
   findOpenSessionOnConnector,
   findSessionByTransactionId,
@@ -27,6 +34,7 @@ import {
 } from '../../domain/meter.js';
 import { normalizeConnectorStatus, sessionStatusFor } from '../../domain/status.js';
 import type { RealtimePublisher } from '../../realtime.js';
+import type { WebhookDispatcher } from '../../webhooks.js';
 import type { ChargerConnection } from '../../registry.js';
 
 export interface HandlerContext {
@@ -35,6 +43,7 @@ export interface HandlerContext {
   logger: Logger;
   realtime: RealtimePublisher;
   meterWriter: BatchWriter<MeterValueRow>;
+  webhooks: WebhookDispatcher;
   connection: ChargerConnection;
 }
 
@@ -173,7 +182,7 @@ export async function handleStatusNotification(
     recordedAt,
   });
 
-  await mirrorStatusOntoOpenSession(ctx, req.connectorId, status);
+  await mirrorStatusOntoOpenSession(ctx, req.connectorId, status, recordedAt);
 
   ctx.realtime.cpStatus(connection.tenantId, {
     chargePointId: connection.chargePointId,
@@ -195,6 +204,7 @@ async function mirrorStatusOntoOpenSession(
   ctx: HandlerContext,
   ocppConnectorId: number,
   status: ConnectorStatus,
+  recordedAt: Date,
 ): Promise<void> {
   const next = sessionStatusFor(status);
   if (!next) return;
@@ -204,7 +214,10 @@ async function mirrorStatusOntoOpenSession(
     ctx.connection.chargePointId,
     ocppConnectorId,
   );
-  if (!session || session.status === next) return;
+  if (!session) return;
+  // Idle time (Phase 3) is measured from the last moment charging ended.
+  await markChargingEnded(ctx.db, session.id, recordedAt, next !== 'active');
+  if (session.status === next) return;
 
   await setSessionStatus(ctx.db, session.id, next);
   ctx.realtime.sessionUpdate(ctx.connection.tenantId, {
@@ -255,6 +268,18 @@ export async function handleStartTransaction(
     req.connectorId,
   );
 
+  // Phase 3: resolve the tariff now and freeze it. A tariff edit after this
+  // instant cannot change what this session costs.
+  const resolved = await resolveTariff(db, {
+    tenantId: connection.tenantId,
+    chargePointId: connection.chargePointId,
+    connectorId: connector.id,
+    idTagId,
+  });
+  if (!resolved) {
+    ctx.logger.warn({ idTag: req.idTag }, 'no tariff applies — session will be unbillable');
+  }
+
   const session = await startSession(db, {
     tenantId: connection.tenantId,
     chargePointId: connection.chargePointId,
@@ -268,10 +293,23 @@ export async function handleStartTransaction(
     offline,
     reservationId: req.reservationId ?? null,
     startSource: 'rfid',
+    tariff: resolved
+      ? {
+          tariffVersionId: resolved.tariffVersionId,
+          snapshot: resolved.snapshot,
+          billingAccountId: resolved.billingAccountId,
+          driverGroupId: resolved.driverGroupId,
+        }
+      : null,
   });
 
   ctx.logger.info(
-    { sessionId: session.id, transactionId: session.ocpp_transaction_id, offline },
+    {
+      sessionId: session.id,
+      transactionId: session.ocpp_transaction_id,
+      offline,
+      tariff: resolved?.snapshot.name ?? null,
+    },
     'session started',
   );
 
@@ -303,17 +341,44 @@ export async function handleStopTransaction(
     // across a gateway outage, or predating onboarding. Recorded rather than
     // discarded: the energy was really delivered.
     ctx.logger.warn({ transactionId: req.transactionId }, 'stop for unknown transaction');
-    await recordOrphanedStop(db, {
-      tenantId: connection.tenantId,
-      chargePointId: connection.chargePointId,
-      connectorId: null,
-      evseId: null,
-      ocppConnectorId: 0,
-      transactionId: req.transactionId,
-      meterStopWh: req.meterStop,
-      stoppedAt,
-      reason: req.reason ?? null,
-      idTag: req.idTag ?? null,
+    await db.begin(async (tx) => {
+      const orphanId = await recordOrphanedStop(tx, {
+        tenantId: connection.tenantId,
+        chargePointId: connection.chargePointId,
+        connectorId: null,
+        evseId: null,
+        ocppConnectorId: 0,
+        transactionId: req.transactionId,
+        meterStopWh: req.meterStop,
+        stoppedAt,
+        reason: req.reason ?? null,
+        idTag: req.idTag ?? null,
+      });
+      // The energy was really delivered, so it gets a record — flagged so an
+      // invoice run never bills a session with no start reading.
+      if (orphanId) {
+        await insertCdr(tx, {
+          tenantId: connection.tenantId,
+          chargingSessionId: orphanId,
+          chargePointId: connection.chargePointId,
+          ocppConnectorId: 0,
+          billingAccountId: null,
+          driverGroupId: null,
+          idTag: req.idTag ?? null,
+          authMethod: 'whitelist',
+          startAt: stoppedAt,
+          endAt: stoppedAt,
+          tariffId: null,
+          tariffVersionId: null,
+          tariffSnapshot: null,
+          periods: [],
+          totals: { energyWh: 0, timeS: 0, parkingTimeS: 0 },
+          cost: null,
+          billable: false,
+          unbillableReason: 'orphaned_no_start',
+          remark: `StopTransaction for unknown transaction ${req.transactionId}`,
+        });
+      }
     });
     return req.idTag ? { idTagInfo: { status: 'Accepted' } } : {};
   }
@@ -322,10 +387,15 @@ export async function handleStopTransaction(
     assumeKwhWhenUnitMissing: connection.quirks.assumeKwhWhenUnitMissing,
   });
 
-  // One transaction: the close, its final readings, and the status log land
-  // together or not at all. A session closed without its final meter values
-  // would be billed short.
-  const energyWh = await db.begin(async (tx) => {
+  // Periodic samples still sitting in the batch writer belong to this session;
+  // the CDR's charging periods are built from them, so land them first.
+  await ctx.meterWriter.flush();
+
+  // One transaction: the close, its final readings, the status log, and the
+  // priced CDR land together or not at all. A session closed without its
+  // final meter values would be billed short; a closed session without its
+  // CDR would be unbillable forever.
+  const outcome = await db.begin(async (tx) => {
     const result = await stopSession(tx, {
       sessionId: session.id,
       meterStopWh: req.meterStop,
@@ -356,13 +426,96 @@ export async function handleStopTransaction(
       recordedAt: stoppedAt,
     });
 
-    return result?.energy_wh ?? null;
+    if (!result)
+      return {
+        energyWh: null as number | null,
+        cdrId: null as string | null,
+        cost: null as billing.CostBreakdown | null,
+      };
+
+    // ── Price it ──────────────────────────────────────────────────────────
+    const startedAt = new Date(session.started_at);
+    const chargingEndedAt = result.charging_ended_at ? new Date(result.charging_ended_at) : null;
+    const meterStart = Number(session.meter_start_wh ?? 0);
+    const samples = await listEnergySamples(tx, session.id);
+    const periods = billing.periodsFromSession({
+      startedAt: startedAt.toISOString(),
+      endedAt: stoppedAt.toISOString(),
+      chargingEndedAt:
+        chargingEndedAt && chargingEndedAt > startedAt && chargingEndedAt < stoppedAt
+          ? chargingEndedAt.toISOString()
+          : null,
+      totalEnergyWh: result.energy_wh,
+      samples:
+        samples.length > 0
+          ? [
+              { at: startedAt.toISOString(), energyWh: meterStart },
+              ...samples.filter((s) => new Date(s.at) > startedAt && new Date(s.at) < stoppedAt),
+              { at: stoppedAt.toISOString(), energyWh: req.meterStop },
+            ]
+          : undefined,
+    });
+    const seconds = (p: billing.ChargingPeriod) =>
+      (new Date(p.end).getTime() - new Date(p.start).getTime()) / 1000;
+    const idleSeconds = periods.filter((p) => !p.charging).reduce((s, p) => s + seconds(p), 0);
+    const chargingSeconds = periods.filter((p) => p.charging).reduce((s, p) => s + seconds(p), 0);
+
+    const snapshot = session.tariff_snapshot;
+    const cost = snapshot ? billing.priceSession(periods, snapshot) : null;
+    const cdr = await insertCdr(tx, {
+      tenantId: connection.tenantId,
+      chargingSessionId: session.id,
+      chargePointId: connection.chargePointId,
+      ocppConnectorId: session.ocpp_connector_id,
+      billingAccountId: session.billing_account_id,
+      driverGroupId: session.driver_group_id,
+      idTag: session.id_tag,
+      authMethod: 'whitelist',
+      startAt: startedAt,
+      endAt: stoppedAt,
+      tariffId: snapshot?.tariff_id ?? null,
+      tariffVersionId: session.tariff_version_id,
+      tariffSnapshot: snapshot,
+      periods,
+      totals: { energyWh: result.energy_wh, timeS: chargingSeconds, parkingTimeS: idleSeconds },
+      cost,
+      billable: Boolean(cost),
+      unbillableReason: cost ? null : 'no_tariff',
+    });
+    await applySessionCost(tx, session.id, cost, Math.round(idleSeconds));
+
+    return { energyWh: result.energy_wh as number | null, cdrId: cdr.id as string | null, cost };
   });
+  const energyWh = outcome.energyWh;
 
   ctx.logger.info(
-    { sessionId: session.id, transactionId: req.transactionId, energyWh },
+    {
+      sessionId: session.id,
+      transactionId: req.transactionId,
+      energyWh,
+      cdrId: outcome.cdrId,
+      totalSen: outcome.cost?.totalSen ?? null,
+    },
     'session stopped',
   );
+
+  if (outcome.cdrId) {
+    ctx.webhooks.emit(connection.tenantId, 'session.completed', {
+      sessionId: session.id,
+      cdrId: outcome.cdrId,
+      chargePointId: connection.chargePointId,
+      ocppIdentity: connection.identity,
+      ocppConnectorId: session.ocpp_connector_id,
+      transactionId: req.transactionId,
+      startedAt: session.started_at,
+      endedAt: stoppedAt.toISOString(),
+      energyWh,
+      currency: outcome.cost?.currency ?? null,
+      totalSen: outcome.cost?.totalSen ?? null,
+      taxSen: outcome.cost?.taxSen ?? null,
+      billable: Boolean(outcome.cost),
+    });
+  }
 
   ctx.realtime.sessionUpdate(connection.tenantId, {
     sessionId: session.id,

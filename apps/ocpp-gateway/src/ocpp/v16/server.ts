@@ -15,6 +15,7 @@ import { insertConnectionLog, registerConnection, unregisterConnection } from '.
 import type { BatchWriter, FrameRow, MeterValueRow } from '../../db/writers.js';
 import { resolveQuirks } from '../../quirks/index.js';
 import type { RealtimePublisher } from '../../realtime.js';
+import type { WebhookDispatcher } from '../../webhooks.js';
 import type { ChargerConnection, ConnectionRegistry } from '../../registry.js';
 import { FrameLogger } from './frameLog.js';
 import * as handlers from './handlers.js';
@@ -28,6 +29,7 @@ export interface OcppServerDeps {
   realtime: RealtimePublisher;
   frameWriter: BatchWriter<FrameRow>;
   meterWriter: BatchWriter<MeterValueRow>;
+  webhooks: WebhookDispatcher;
   /** Invoked when a charger connects, so queued commands can be dispatched. */
   onChargerConnected?: (connection: ChargerConnection) => void;
 }
@@ -66,7 +68,7 @@ export interface OcppServer {
 }
 
 export function createOcppServer(deps: OcppServerDeps): OcppServer {
-  const { db, config, logger, registry, realtime, frameWriter, meterWriter } = deps;
+  const { db, config, logger, registry, realtime, frameWriter, meterWriter, webhooks } = deps;
   const limiter = new AttemptLimiter();
 
   const rpcServer = new RPCServer({
@@ -260,6 +262,7 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
       logger: log,
       realtime,
       meterWriter,
+      webhooks,
       connection,
     };
 

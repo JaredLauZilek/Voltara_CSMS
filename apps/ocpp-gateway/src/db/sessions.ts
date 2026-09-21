@@ -1,3 +1,4 @@
+import type { billing } from '@voltara/shared';
 import type { Queryable } from './client.js';
 
 export interface SessionRow {
@@ -10,7 +11,19 @@ export interface SessionRow {
   status: string;
   started_at: string;
   meter_start_wh: string | number | null;
+  id_tag: string | null;
+  charging_ended_at: string | null;
+  tariff_version_id: string | null;
+  tariff_snapshot: billing.TariffSnapshot | null;
+  billing_account_id: string | null;
+  driver_group_id: string | null;
 }
+
+const SESSION_COLUMNS = `
+  id, tenant_id, charge_point_id, connector_id, ocpp_connector_id,
+  ocpp_transaction_id, status, started_at, meter_start_wh, id_tag,
+  charging_ended_at, tariff_version_id, tariff_snapshot, billing_account_id, driver_group_id
+`;
 
 export interface StartSessionInput {
   tenantId: string;
@@ -25,6 +38,13 @@ export interface StartSessionInput {
   offline: boolean;
   reservationId?: number | null;
   startSource: 'cable' | 'rfid' | 'remote' | 'app' | 'unknown';
+  /** Phase 3: what resolveTariff() found, frozen for the life of the session. */
+  tariff?: {
+    tariffVersionId: string;
+    snapshot: billing.TariffSnapshot;
+    billingAccountId: string | null;
+    driverGroupId: string | null;
+  } | null;
 }
 
 /**
@@ -36,16 +56,20 @@ export async function startSession(
   db: Queryable,
   input: StartSessionInput,
 ): Promise<{ id: string; ocpp_transaction_id: number }> {
+  const t = input.tariff ?? null;
   const rows = await db<{ id: string; ocpp_transaction_id: number }[]>`
     insert into public.charging_sessions (
       tenant_id, charge_point_id, connector_id, evse_id, ocpp_connector_id,
       ocpp_transaction_id, id_tag, id_tag_id, status, started_at,
-      meter_start_wh, offline, reservation_id, start_source
+      meter_start_wh, offline, reservation_id, start_source,
+      tariff_version_id, tariff_snapshot, billing_account_id, driver_group_id
     ) values (
       ${input.tenantId}, ${input.chargePointId}, ${input.connectorId}, ${input.evseId},
       ${input.ocppConnectorId}, nextval('public.ocpp_transaction_id_seq')::int,
       ${input.idTag}, ${input.idTagId}, 'active', ${input.startedAt},
-      ${input.meterStartWh}, ${input.offline}, ${input.reservationId ?? null}, ${input.startSource}
+      ${input.meterStartWh}, ${input.offline}, ${input.reservationId ?? null}, ${input.startSource},
+      ${t?.tariffVersionId ?? null}, ${t ? db.json(t.snapshot as never) : null},
+      ${t?.billingAccountId ?? null}, ${t?.driverGroupId ?? null}
     )
     returning id, ocpp_transaction_id
   `;
@@ -58,8 +82,7 @@ export async function findSessionByTransactionId(
   transactionId: number,
 ): Promise<SessionRow | null> {
   const rows = await db<SessionRow[]>`
-    select id, tenant_id, charge_point_id, connector_id, ocpp_connector_id,
-           ocpp_transaction_id, status, started_at, meter_start_wh
+    select ${db.unsafe(SESSION_COLUMNS)}
     from public.charging_sessions
     where tenant_id = ${tenantId} and ocpp_transaction_id = ${transactionId}
     limit 1
@@ -74,8 +97,7 @@ export async function findOpenSessionOnConnector(
   ocppConnectorId: number,
 ): Promise<SessionRow | null> {
   const rows = await db<SessionRow[]>`
-    select id, tenant_id, charge_point_id, connector_id, ocpp_connector_id,
-           ocpp_transaction_id, status, started_at, meter_start_wh
+    select ${db.unsafe(SESSION_COLUMNS)}
     from public.charging_sessions
     where charge_point_id = ${chargePointId}
       and ocpp_connector_id = ${ocppConnectorId}
@@ -102,8 +124,8 @@ export interface StopSessionInput {
 export async function stopSession(
   db: Queryable,
   input: StopSessionInput,
-): Promise<{ energy_wh: number } | null> {
-  const rows = await db<{ energy_wh: number }[]>`
+): Promise<{ energy_wh: number; charging_ended_at: string | null } | null> {
+  const rows = await db<{ energy_wh: number; charging_ended_at: string | null }[]>`
     update public.charging_sessions set
       status = 'completed',
       ended_at = ${input.stoppedAt},
@@ -112,7 +134,7 @@ export async function stopSession(
       stop_reason = ${input.reason},
       stop_id_tag = ${input.stopIdTag}
     where id = ${input.sessionId} and ended_at is null
-    returning energy_wh
+    returning energy_wh, charging_ended_at
   `;
   return rows[0] ?? null;
 }

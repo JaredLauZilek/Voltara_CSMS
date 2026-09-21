@@ -9,6 +9,7 @@ import { createOcppServer } from './ocpp/v16/server.js';
 import { ConnectionRegistry } from './registry.js';
 import { RealtimePublisher } from './realtime.js';
 import { CommandBus } from './commandBus.js';
+import { WebhookDispatcher } from './webhooks.js';
 
 export interface Gateway {
   start: () => Promise<{ port: number }>;
@@ -34,6 +35,7 @@ export function createGateway(config: GatewayConfig = loadConfig()): Gateway {
   const frameWriter = createFrameWriter(db, logger);
   const meterWriter = createMeterValueWriter(db, logger);
   const commandBus = new CommandBus(db, config, logger, registry);
+  const webhooks = new WebhookDispatcher(db, logger);
 
   const ocpp = createOcppServer({
     db,
@@ -43,6 +45,7 @@ export function createGateway(config: GatewayConfig = loadConfig()): Gateway {
     realtime,
     frameWriter,
     meterWriter,
+    webhooks,
     onChargerConnected: (connection) => commandBus.onChargerConnected(connection),
   });
 
@@ -94,6 +97,7 @@ export function createGateway(config: GatewayConfig = loadConfig()): Gateway {
       }
 
       await commandBus.start();
+      webhooks.start();
 
       httpServer = createServer((req, res) => {
         const { status, body } = requestHandler(req.url);
@@ -128,6 +132,7 @@ export function createGateway(config: GatewayConfig = loadConfig()): Gateway {
       // Order matters: stop accepting work, close sockets, then flush what is
       // still buffered before the database connection goes away.
       await commandBus.stop().catch((err) => logger.error({ err }, 'command bus stop failed'));
+      await webhooks.stop();
       await ocpp.close().catch((err) => logger.error({ err }, 'ocpp close failed'));
 
       if (httpServer) {

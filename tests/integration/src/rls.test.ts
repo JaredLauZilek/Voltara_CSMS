@@ -319,7 +319,7 @@ describe('billing core (Phase 3)', () => {
   it('an admin can create a tariff and its first version; a viewer cannot', async () => {
     const created = await as(personaA('admin'), async (tx) => {
       const [t] =
-        await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'Standard') returning id`;
+        await tx`insert into public.tariffs (tenant_id, name) values (${TENANT_A}, 'RLS test tariff') returning id`;
       const [v] = await tx`
         insert into public.tariff_versions (tenant_id, tariff_id, version, elements, created_by)
         values (${TENANT_A}, ${t.id}, public.next_tariff_version(${t.id}::uuid), ${tx.json(ELEMENTS as never)}, ${USER_A})
