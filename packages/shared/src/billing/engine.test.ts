@@ -299,6 +299,51 @@ describe('invariants (randomised)', () => {
 });
 
 describe('periodsFromSession', () => {
+  it('never double-counts idle when the samples already reach the stop time', () => {
+    // Samples every 5 min up to the moment charging ended, plus the stop reading
+    // 20 min later — exactly what the gateway assembles at StopTransaction.
+    const periods = periodsFromSession({
+      startedAt: kl('2026-09-21T10:00'),
+      endedAt: kl('2026-09-21T10:30'),
+      chargingEndedAt: kl('2026-09-21T10:10'),
+      totalEnergyWh: 2000,
+      samples: [
+        { at: kl('2026-09-21T10:00'), energyWh: 1000 },
+        { at: kl('2026-09-21T10:05'), energyWh: 2000 },
+        { at: kl('2026-09-21T10:10'), energyWh: 3000 },
+        { at: kl('2026-09-21T10:30'), energyWh: 3000 },
+      ],
+    });
+    const idle = periods.filter((p) => !p.charging);
+    expect(idle).toHaveLength(1);
+    expect((new Date(idle[0].end).getTime() - new Date(idle[0].start).getTime()) / 1000).toBe(1200);
+    expect(periods.filter((p) => p.charging).reduce((s, p) => s + p.energyWh, 0)).toBe(2000);
+  });
+
+  it('splits a sample interval that straddles the charging end and keeps its energy on the charging side', () => {
+    const periods = periodsFromSession({
+      startedAt: kl('2026-09-21T10:00'),
+      endedAt: kl('2026-09-21T10:20'),
+      chargingEndedAt: kl('2026-09-21T10:07'),
+      totalEnergyWh: 1000,
+      samples: [
+        { at: kl('2026-09-21T10:00'), energyWh: 0 },
+        { at: kl('2026-09-21T10:10'), energyWh: 1000 },
+        { at: kl('2026-09-21T10:20'), energyWh: 1000 },
+      ],
+    });
+    expect(periods.map((p) => [p.charging, p.energyWh])).toEqual([
+      [true, 1000],
+      [false, 0],
+      [false, 0],
+    ]);
+    expect(
+      periods
+        .filter((p) => !p.charging)
+        .reduce((s, p) => s + (new Date(p.end).getTime() - new Date(p.start).getTime()) / 1000, 0),
+    ).toBe(13 * 60);
+  });
+
   it('splits charging from idle at chargingEndedAt', () => {
     const periods = periodsFromSession({
       startedAt: kl('2026-09-21T10:00'),

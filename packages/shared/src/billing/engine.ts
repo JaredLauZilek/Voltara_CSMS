@@ -421,6 +421,12 @@ const fmtDuration = (s: number) => {
 /**
  * Builds charging periods from a session's status timeline and meter samples.
  * The gateway calls this at StopTransaction; the preview builds synthetic ones.
+ *
+ * With samples, each consecutive pair becomes one period; a pair that
+ * straddles `chargingEndedAt` is split there (all of its energy goes to the
+ * charging half — a meter register does not move while idle). Whatever the
+ * samples do not cover up to `endedAt` is appended once. Without samples the
+ * session is two periods at most: charging, then idle.
  */
 export function periodsFromSession(input: {
   startedAt: string;
@@ -428,33 +434,49 @@ export function periodsFromSession(input: {
   /** Moment charging stopped for good; null = charged until the end. */
   chargingEndedAt: string | null;
   totalEnergyWh: number;
-  /** Optional minute samples (from meter_values_agg_1m) for accurate ToU apportioning. */
+  /** Optional cumulative register samples (Wh) for accurate ToU apportioning. */
   samples?: { at: string; energyWh: number }[];
 }): ChargingPeriod[] {
-  const chargeEnd = input.chargingEndedAt ?? input.endedAt;
+  const startMs = new Date(input.startedAt).getTime();
+  const endMs = new Date(input.endedAt).getTime();
+  const chargeEndMs = Math.min(
+    endMs,
+    Math.max(startMs, input.chargingEndedAt ? new Date(input.chargingEndedAt).getTime() : endMs),
+  );
+  const iso = (ms: number) => new Date(ms).toISOString();
   const periods: ChargingPeriod[] = [];
-  if (input.samples && input.samples.length > 1) {
-    // Cumulative register samples → per-interval deltas.
-    for (let i = 1; i < input.samples.length; i += 1) {
-      const a = input.samples[i - 1];
-      const b = input.samples[i];
-      periods.push({
-        start: a.at,
-        end: b.at,
-        energyWh: Math.max(0, b.energyWh - a.energyWh),
-        charging: new Date(b.at) <= new Date(chargeEnd),
-      });
+  const push = (from: number, to: number, energyWh: number, charging: boolean) => {
+    if (to > from) periods.push({ start: iso(from), end: iso(to), energyWh, charging });
+  };
+
+  const samples = (input.samples ?? [])
+    .map((s) => ({ ms: new Date(s.at).getTime(), wh: s.energyWh }))
+    .filter((s) => s.ms >= startMs && s.ms <= endMs)
+    .sort((a, b) => a.ms - b.ms);
+
+  if (samples.length > 1) {
+    for (let i = 1; i < samples.length; i += 1) {
+      const a = samples[i - 1];
+      const b = samples[i];
+      const delta = Math.max(0, b.wh - a.wh);
+      if (b.ms <= chargeEndMs) push(a.ms, b.ms, delta, true);
+      else if (a.ms >= chargeEndMs) push(a.ms, b.ms, 0, false);
+      else {
+        push(a.ms, chargeEndMs, delta, true);
+        push(chargeEndMs, b.ms, 0, false);
+      }
     }
-  } else if (new Date(chargeEnd) > new Date(input.startedAt)) {
-    periods.push({
-      start: input.startedAt,
-      end: chargeEnd,
-      energyWh: input.totalEnergyWh,
-      charging: true,
-    });
+    const last = samples[samples.length - 1].ms;
+    if (last < chargeEndMs) {
+      push(last, chargeEndMs, 0, true);
+      push(chargeEndMs, endMs, 0, false);
+    } else {
+      push(last, endMs, 0, false);
+    }
+    return periods;
   }
-  if (new Date(input.endedAt) > new Date(chargeEnd)) {
-    periods.push({ start: chargeEnd, end: input.endedAt, energyWh: 0, charging: false });
-  }
+
+  push(startMs, chargeEndMs, input.totalEnergyWh, true);
+  push(chargeEndMs, endMs, 0, false);
   return periods;
 }
