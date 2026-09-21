@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
+import { useBillingAccounts } from '@/features/billing-accounts';
 import { ID_TAG_KINDS, ID_TAG_STATUSES, KIND_LABELS, STATUS_LABELS } from './types';
-import type { IdTag, IdTagInsert } from './types';
+import type { IdTagInsert, IdTagWithAccount } from './types';
 
 type FormRow = Omit<IdTagInsert, 'tenant_id'>;
 
 interface Props {
-  idTag: IdTag | null;
+  idTag: IdTagWithAccount | null;
   onClose: () => void;
   onSave: (row: FormRow) => void;
   onDelete?: (id: string) => void;
@@ -46,9 +47,17 @@ const toLocalInput = (iso: string | null | undefined) => {
 
 export function IdTagModal({ idTag, onClose, onSave, onDelete, isSaving, saveError }: Props) {
   const isNew = !idTag;
+  const { data: accounts = [] } = useBillingAccounts();
   const [form, setForm] = useState<FormRow>(() => {
     if (idTag) {
-      const { id: _id, tenant_id: _t, created_at: _c, driver_user_id: _d, ...rest } = idTag;
+      const {
+        id: _id,
+        tenant_id: _t,
+        created_at: _c,
+        driver_user_id: _d,
+        billing_account_name: _n,
+        ...rest
+      } = idTag;
       return rest;
     }
     return {
@@ -167,6 +176,25 @@ export function IdTagModal({ idTag, onClose, onSave, onDelete, isSaving, saveErr
             }
             style={inputStyle}
           />
+        </div>
+
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={labelStyle}>Bills to</label>
+          <select
+            value={form.billing_account_id ?? ''}
+            onChange={(e) => setForm((f) => ({ ...f, billing_account_id: e.target.value || null }))}
+            style={inputStyle}
+          >
+            <option value="">— Ad-hoc (no billing account) —</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
+            Sessions started with this tag are invoiced to that account.
+          </div>
         </div>
 
         <div>

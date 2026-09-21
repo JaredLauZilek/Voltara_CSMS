@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { periodsFromSession, priceSession, type ChargingPeriod } from './engine';
 import { bps, exclFromIncl, formatSen, parseSen, roundSen } from './money';
+import { buildElements, describeElements, detectPreset } from './presets';
 import { TARIFF_PRESETS, tariffSnapshotSchema, type TariffElement } from './tariff';
 
 const snapshot = (
@@ -324,5 +325,49 @@ describe('periodsFromSession', () => {
       ],
     });
     expect(periods.map((p) => p.energyWh)).toEqual([100, 150, 50]);
+  });
+});
+
+describe('presets round-trip', () => {
+  it('recognises every preset it builds, and describes it for drivers', () => {
+    const cases = [
+      ['per_kwh', { senPerKwh: 120 }, 'RM 1.20/kWh'],
+      [
+        'per_kwh_idle',
+        { senPerKwh: 120, idleSenPerMinute: 100, graceMinutes: 15 },
+        'RM 1.20/kWh · idle RM 1.00/min after 15 min',
+      ],
+      ['per_minute', { senPerMinute: 50 }, 'RM 0.50/min'],
+      [
+        'peak_off_peak',
+        { peakSenPerKwh: 200, offPeakSenPerKwh: 100, peakStart: '14:00', peakEnd: '22:00' },
+        'RM 2.00/kWh 14:00–22:00 · RM 1.00/kWh otherwise',
+      ],
+      [
+        'session_fee_kwh',
+        { sessionFeeSen: 200, senPerKwh: 100 },
+        'RM 2.00 per session + RM 1.00/kWh',
+      ],
+      ['free', {}, 'Free'],
+    ] as const;
+    for (const [kind, params, text] of cases) {
+      const elements = buildElements(kind, params);
+      const detected = detectPreset(elements);
+      expect(detected.kind).toBe(kind);
+      expect(detected.params).toEqual(params);
+      expect(describeElements(elements)).toBe(text);
+    }
+  });
+
+  it('treats anything else as custom but still describes it', () => {
+    const elements: TariffElement[] = [
+      {
+        price_components: [{ type: 'ENERGY', price_sen: 100, step_size: 1 }],
+        restrictions: { max_kwh: 10 },
+      },
+      { price_components: [{ type: 'ENERGY', price_sen: 80, step_size: 1 }] },
+    ];
+    expect(detectPreset(elements).kind).toBe('custom');
+    expect(describeElements(elements)).toContain('RM 1.00/kWh');
   });
 });

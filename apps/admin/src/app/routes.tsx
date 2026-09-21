@@ -8,11 +8,18 @@ import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
   BatteryCharging,
+  Building2,
   CreditCard,
+  FileText,
   LayoutDashboard,
   MapPin,
+  PieChart,
+  Receipt,
+  Settings,
   ScrollText,
+  Tags,
   Users,
+  UsersRound,
   Zap,
 } from 'lucide-react';
 import { OverviewScreen } from '@/features/overview';
@@ -23,6 +30,13 @@ import { IssuesScreen } from '@/features/issues';
 import { IdTagsScreen } from '@/features/id-tags';
 import { OcppLogsScreen } from '@/features/ocpp-logs';
 import { TeamScreen } from '@/features/team';
+import { TariffsFeature } from '@/features/tariffs';
+import { DriverGroupsScreen } from '@/features/driver-groups';
+import { BillingAccountsScreen } from '@/features/billing-accounts';
+import { CdrsFeature } from '@/features/cdrs';
+import { DocumentsFeature } from '@/features/documents';
+import { ReportsScreen } from '@/features/reports';
+import { OperatorSettingsScreen } from '@/features/operator-settings';
 
 export interface RouteDef {
   path: string;
@@ -38,7 +52,14 @@ export const ROUTES: RouteDef[] = [
   { path: '/issues', title: 'Issues', screen: IssuesScreen },
   { path: '/id-tags', title: 'ID Tags', screen: IdTagsScreen },
   { path: '/ocpp-logs', title: 'OCPP Log', screen: OcppLogsScreen },
+  { path: '/tariffs', title: 'Tariffs', screen: TariffsFeature },
+  { path: '/driver-groups', title: 'Driver groups', screen: DriverGroupsScreen },
+  { path: '/billing-accounts', title: 'Billing accounts', screen: BillingAccountsScreen },
+  { path: '/cdrs', title: 'Charging records', screen: CdrsFeature },
+  { path: '/documents', title: 'Documents', screen: DocumentsFeature },
+  { path: '/reports', title: 'Reports', screen: ReportsScreen },
   { path: '/team', title: 'Team', screen: TeamScreen },
+  { path: '/operator', title: 'Operator', screen: OperatorSettingsScreen },
 ];
 
 /** Where "/" lands. */
@@ -77,8 +98,22 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    label: 'Billing',
+    items: [
+      { path: '/tariffs', label: 'Tariffs', icon: Tags },
+      { path: '/driver-groups', label: 'Driver groups', icon: UsersRound },
+      { path: '/billing-accounts', label: 'Billing accounts', icon: Building2 },
+      { path: '/cdrs', label: 'Charging records', icon: Receipt },
+      { path: '/documents', label: 'Documents', icon: FileText },
+      { path: '/reports', label: 'Reports', icon: PieChart },
+    ],
+  },
+  {
     label: 'Settings',
-    items: [{ path: '/team', label: 'Team', icon: Users }],
+    items: [
+      { path: '/team', label: 'Team', icon: Users },
+      { path: '/operator', label: 'Operator', icon: Settings },
+    ],
   },
 ];
 

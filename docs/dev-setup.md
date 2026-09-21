@@ -34,6 +34,7 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 | `pnpm exec supabase migration new <topic>`   | new migration file                                                                  |
 | `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
 | `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324   |
+| `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)   |
 
 To put a **real charger** on the platform, see [deploy-gateway.md](deploy-gateway.md) —
 it covers the Fly.io deploy, the charger's settings, and how to confirm it connected.

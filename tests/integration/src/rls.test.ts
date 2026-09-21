@@ -465,6 +465,163 @@ describe('billing core (Phase 3)', () => {
   });
 });
 
+describe('documents (Phase 3 step 5)', () => {
+  const CP_A = '66666666-6666-4666-8666-666666666661';
+  const LOC_A = '33333333-3333-4333-8333-333333333331';
+
+  /** Seeds an account and two billable CDRs for it as the table owner, inside the caller's transaction. */
+  async function seedBillable(tx: Tx) {
+    await tx.unsafe('set local role postgres');
+    const [acct] = await tx`
+      insert into public.billing_accounts (tenant_id, kind, name, legal_name, tax_identification_no)
+      values (${TENANT_A}, 'corporate', 'JMB Vantage', 'JMB Vantage Residences', 'C1234567890') returning id
+    `;
+    const cdrs = await tx`
+      insert into public.cdrs (tenant_id, charge_point_id, location_id, ocpp_connector_id, ocpp_identity, billing_account_id,
+                               start_at, end_at, total_energy_wh, currency, lines, subtotal_sen, tax_rate_bps, tax_sen, total_sen, billable)
+      values
+        (${TENANT_A}, ${CP_A}, ${LOC_A}, 1, 'VCP-DEMO-001', ${acct.id}, '2026-09-03T02:00:00Z', '2026-09-03T03:00:00Z', 7400, 'MYR',
+         ${tx.json([{ dimension: 'ENERGY', elementIndex: 0, volume: 7400, unit: 'Wh', unitPriceSen: 120, label: 'Energy 7.400 kWh @ RM 1.20/kWh', amountExclSen: 888, taxSen: 0, amountInclSen: 888 }] as never)},
+         888, 0, 0, 888, true),
+        (${TENANT_A}, ${CP_A}, ${LOC_A}, 1, 'VCP-DEMO-001', ${acct.id}, '2026-09-10T02:00:00Z', '2026-09-10T03:00:00Z', 10000, 'MYR',
+         ${tx.json([] as never)}, 1200, 800, 96, 1296, true)
+      returning id
+    `;
+    await tx.unsafe('set local role authenticated');
+    return { accountId: acct.id as string, cdrIds: cdrs.map((c) => c.id as string) };
+  }
+
+  it('run_invoice builds a draft with one line per session, links the sessions, and issue freezes it', async () => {
+    await as(personaA('admin'), async (tx) => {
+      const { accountId, cdrIds } = await seedBillable(tx);
+      const [{ run_invoice: docId }] =
+        await tx`select public.run_invoice(${accountId}::uuid, '2026-09-01', '2026-09-30')`;
+      const [doc] = await tx`select * from public.documents where id = ${docId}`;
+      expect(doc.kind).toBe('invoice');
+      expect(doc.status).toBe('draft');
+      expect(doc.number).toMatch(/^INV-\d{6}-\d{4}$/);
+      expect(Number(doc.subtotal_sen)).toBe(2088);
+      expect(Number(doc.tax_sen)).toBe(96);
+      expect(Number(doc.total_sen)).toBe(2184);
+      expect((doc.lines as unknown[]).length).toBe(2);
+      expect((doc.buyer as { tax_identification_no: string }).tax_identification_no).toBe(
+        'C1234567890',
+      );
+      const linked =
+        await tx`select count(*)::int as n from public.cdrs where invoice_document_id = ${docId}`;
+      expect(linked[0].n).toBe(2);
+      expect(cdrIds).toHaveLength(2);
+
+      // A second run finds nothing left to bill. Inside one transaction the
+      // expected error must be confined to a savepoint or it aborts the rest.
+      await expect(
+        tx.savepoint(
+          (sp) => sp`select public.run_invoice(${accountId}::uuid, '2026-09-01', '2026-09-30')`,
+        ),
+      ).rejects.toThrow(/No uninvoiced sessions/);
+
+      await tx`select public.issue_document(${docId}::uuid)`;
+      const [issued] = await tx`select status, issued_at from public.documents where id = ${docId}`;
+      expect(issued.status).toBe('issued');
+      expect(issued.issued_at).not.toBeNull();
+      // Frozen: even the owner cannot change the total now.
+      await tx.unsafe('set local role postgres');
+      await expect(
+        tx`update public.documents set total_sen = 1 where id = ${docId}`,
+      ).rejects.toThrow(/immutable/);
+    });
+  });
+
+  it('void releases the sessions so they can be invoiced again', async () => {
+    await as(personaA('admin'), async (tx) => {
+      const { accountId } = await seedBillable(tx);
+      const [{ run_invoice: docId }] =
+        await tx`select public.run_invoice(${accountId}::uuid, '2026-09-01', '2026-09-30')`;
+      await tx`select public.void_document(${docId}::uuid)`;
+      const [{ n }] =
+        await tx`select count(*)::int as n from public.cdrs where invoice_document_id = ${docId}`;
+      expect(n).toBe(0);
+      const [{ run_invoice: again }] =
+        await tx`select public.run_invoice(${accountId}::uuid, '2026-09-01', '2026-09-30')`;
+      expect(again).not.toBe(docId);
+    });
+  });
+
+  it('a viewer cannot run invoices; an operator can issue a receipt', async () => {
+    await expect(
+      as(
+        personaA('viewer'),
+        (tx) => tx`select public.run_invoice(gen_random_uuid(), '2026-09-01', '2026-09-30')`,
+      ),
+    ).rejects.toThrow(/Only owners and admins/);
+    await as(personaA('operator'), async (tx) => {
+      const { cdrIds } = await seedBillable(tx);
+      const [{ create_receipt: docId }] =
+        await tx`select public.create_receipt(${cdrIds[0]}::uuid)`;
+      const [doc] =
+        await tx`select kind, status, number, total_sen, cdr_id from public.documents where id = ${docId}`;
+      expect(doc.kind).toBe('receipt');
+      expect(doc.status).toBe('issued');
+      expect(doc.number).toMatch(/^R-/);
+      expect(Number(doc.total_sen)).toBe(888);
+      expect(doc.cdr_id).toBe(cdrIds[0]);
+      // Idempotent: asking again returns the same receipt.
+      const [{ create_receipt: same }] = await tx`select public.create_receipt(${cdrIds[0]}::uuid)`;
+      expect(same).toBe(docId);
+    });
+  });
+
+  it('run_settlement applies the host share, electricity and platform fee from the agreement', async () => {
+    await as(personaA('admin'), async (tx) => {
+      const { accountId } = await seedBillable(tx); // 17.4 kWh, RM 20.88 excl. tax at LOC_A
+      await tx.unsafe('set local role postgres');
+      const [host] =
+        await tx`insert into public.billing_accounts (tenant_id, kind, name, location_id) values (${TENANT_A}, 'site_host', 'JMB Vantage (host)', ${LOC_A}) returning id`;
+      await tx`
+        insert into public.site_host_agreements (tenant_id, location_id, host_account_id, revenue_share_bps_ac, fixed_monthly_fee_sen, electricity_sen_per_kwh, electricity_basis, valid_from)
+        values (${TENANT_A}, ${LOC_A}, ${host.id}, 3000, 5000, 50, 'deduct_from_share', '2026-01-01')
+      `;
+      await tx.unsafe('set local role authenticated');
+      const [{ run_settlement: docId }] =
+        await tx`select public.run_settlement(${LOC_A}::uuid, '2026-09-01', '2026-09-30')`;
+      const [doc] =
+        await tx`select total_sen, lines, billing_account_id from public.documents where id = ${docId}`;
+      // 30% of 2088 = 626.4 → 626; electricity 17.4 kWh × 50 sen = 870; fee 5000 → 626 − 870 − 5000 = −5244
+      expect(Number(doc.total_sen)).toBe(626 - 870 - 5000);
+      expect(doc.billing_account_id).toBe(host.id);
+      expect((doc.lines as { kind: string }[]).map((l) => l.kind)).toEqual([
+        'info',
+        'credit',
+        'debit',
+        'debit',
+      ]);
+      expect(accountId).toBeTruthy();
+    });
+  });
+
+  it('revenue_summary is scoped by RLS and sums billable sessions only', async () => {
+    await as(personaA('admin'), async (tx) => {
+      await seedBillable(tx);
+      await tx.unsafe('set local role postgres');
+      await tx`insert into public.cdrs (tenant_id, charge_point_id, location_id, start_at, end_at, total_energy_wh, billable, unbillable_reason, total_sen)
+               values (${TENANT_A}, ${CP_A}, ${LOC_A}, '2026-09-11T02:00:00Z', '2026-09-11T03:00:00Z', 500, false, 'no_tariff', 0)`;
+      await tx.unsafe('set local role authenticated');
+      const rows = await tx`select * from public.revenue_summary('2026-09-01', '2026-09-30')`;
+      const total = rows.reduce((s, r) => s + Number(r.total_sen), 0);
+      const sessions = rows.reduce((s, r) => s + Number(r.sessions), 0);
+      const unbillable = rows.reduce((s, r) => s + Number(r.unbillable_sessions), 0);
+      expect(total).toBe(2184);
+      expect(sessions).toBe(3);
+      expect(unbillable).toBe(1);
+    });
+    const other = await as(
+      personaB,
+      (tx) => tx`select * from public.revenue_summary('2026-09-01', '2026-09-30')`,
+    );
+    expect(other.reduce((s, r) => s + Number(r.total_sen), 0)).toBe(0);
+  });
+});
+
 describe('tenants table visibility', () => {
   it('a plain member sees only their own tenant row', async () => {
     const rows = await as(personaB, (tx) => tx`select id from public.tenants`);

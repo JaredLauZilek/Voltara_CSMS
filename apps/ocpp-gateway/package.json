@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",
-    "register:charger": "tsx scripts/register-charger.ts"
+    "register:charger": "tsx scripts/register-charger.ts",
+    "sim:session": "tsx scripts/simulate-session.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

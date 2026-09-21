@@ -1,6 +1,8 @@
 import { Link, useParams } from 'react-router-dom';
 import { Badge, C, LineChart } from '@voltara/ui';
+import { billing } from '@voltara/shared';
 import { formatDateTime, formatDuration, formatKw, formatKwh } from '@voltara/shared';
+import { useSessionCdr } from '@/features/cdrs';
 import { useSessionDetail, useSessionMinutes } from './hooks';
 import { OPEN_STATUSES, SESSION_BADGE, SESSION_STATUS_LABELS } from './types';
 import type { SessionStatus } from './types';
@@ -30,6 +32,7 @@ export function SessionDetailScreen() {
   const session = data?.session ?? null;
   const open = session ? OPEN_STATUSES.includes(session.status) : false;
   const { data: minutes = [] } = useSessionMinutes(id, open);
+  const { data: cdr } = useSessionCdr(id);
 
   if (isLoading) return null;
   if (!session) {
@@ -105,6 +108,54 @@ export function SessionDetailScreen() {
           </div>
         </div>
       </div>
+
+      {cdr && (
+        <Link to={`/cdrs/${cdr.id}`} style={{ textDecoration: 'none' }}>
+          <div
+            style={{
+              ...card,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 14,
+              background: cdr.billable ? C.honeydew : C.warningBg,
+              borderColor: cdr.billable ? C.green : C.warning,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: cdr.billable ? C.green : C.warning,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
+              {cdr.billable ? 'Priced' : 'Unbillable'}
+            </span>
+            <span
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: cdr.billable ? C.green : C.warning,
+                letterSpacing: '-0.03em',
+                fontFamily: 'monospace',
+              }}
+            >
+              {cdr.billable
+                ? billing.formatSen(Number(cdr.total_sen))
+                : cdr.unbillable_reason?.replace(/_/g, ' ')}
+            </span>
+            <span style={{ fontSize: 12, color: C.slate }}>
+              {cdr.billable
+                ? `incl. ${billing.formatSen(Number(cdr.tax_sen))} tax · ${cdr.document_number ? `on ${cdr.document_number}` : 'not yet invoiced'}`
+                : 'recorded, not billed'}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 700, color: C.green }}>
+              Charging record ›
+            </span>
+          </div>
+        </Link>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         <Stat label="Energy" value={formatKwh(session.energy_wh, 2)} accent />

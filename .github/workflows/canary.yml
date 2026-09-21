@@ -1,0 +1,39 @@
+# Nightly canary: a scripted charger runs one real session against STAGING
+# over the public internet and the run fails unless a priced CDR appears.
+# This exercises the whole path a customer's charger takes — TLS, Basic Auth,
+# boot, transaction, meter values, stop, tariff resolution, pricing — so a
+# regression is caught before a pilot site notices.
+#
+# Disabled until repo variable CANARY_ENABLED=true and the staging environment
+# has CANARY_IDENTITY, CANARY_KEY (a charger registered for this purpose),
+# CANARY_DATABASE_URL (session pooler) — CANARY_GATEWAY_URL is a variable.
+# CANARY_EXPECT_SEN pins the expected price when the canary tariff is known.
+
+name: canary
+
+on:
+  schedule:
+    - cron: '45 19 * * *' # 03:45 MYT nightly
+  workflow_dispatch:
+
+jobs:
+  canary-staging:
+    if: vars.CANARY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Run one session and verify its CDR
+        run: pnpm sim:session --check --kwh 7.4 --minutes 30 --idle-min 5 ${{ vars.CANARY_EXPECT_SEN && format('--expect-sen {0}', vars.CANARY_EXPECT_SEN) || '' }}
+        env:
+          CANARY_GATEWAY_URL: ${{ vars.CANARY_GATEWAY_URL || 'wss://voltara-gateway-staging.fly.dev' }}
+          CANARY_IDENTITY: ${{ secrets.CANARY_IDENTITY }}
+          CANARY_KEY: ${{ secrets.CANARY_KEY }}
+          CANARY_TAG: ${{ vars.CANARY_TAG || 'VLT-CANARY-TAG' }}
+          CANARY_DATABASE_URL: ${{ secrets.CANARY_DATABASE_URL }}

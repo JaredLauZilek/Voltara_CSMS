@@ -18,3 +18,8 @@ export const STATUS_LABELS: Record<string, string> = {
   blocked: 'Blocked',
   expired: 'Expired',
 };
+
+/** A tag with the payer it bills to. */
+export interface IdTagWithAccount extends IdTag {
+  billing_account_name: string | null;
+}

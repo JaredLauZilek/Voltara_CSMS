@@ -918,6 +918,7 @@ export type Database = {
         Row: {
           billing_account_id: string | null
           buyer: Json
+          cdr_id: string | null
           created_at: string
           created_by: string | null
           currency: string
@@ -946,6 +947,7 @@ export type Database = {
         Insert: {
           billing_account_id?: string | null
           buyer?: Json
+          cdr_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -974,6 +976,7 @@ export type Database = {
         Update: {
           billing_account_id?: string | null
           buyer?: Json
+          cdr_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1005,6 +1008,13 @@ export type Database = {
             columns: ["billing_account_id"]
             isOneToOne: false
             referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_cdr_id_fkey"
+            columns: ["cdr_id"]
+            isOneToOne: false
+            referencedRelation: "cdrs"
             referencedColumns: ["id"]
           },
           {
@@ -2142,6 +2152,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buyer_snapshot: { Args: { p_account: string }; Returns: Json }
       charge_point_uptime: {
         Args: { p_window?: string }
         Returns: {
@@ -2155,10 +2166,12 @@ export type Database = {
         Args: { p_month: string; p_table: string }
         Returns: undefined
       }
+      create_receipt: { Args: { p_cdr_id: string }; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: never; Returns: boolean }
       is_tenant_operator: { Args: never; Returns: boolean }
+      issue_document: { Args: { p_document_id: string }; Returns: undefined }
       jwt_tenant_id: { Args: never; Returns: string }
       jwt_tenant_role: { Args: never; Returns: string }
       list_team_members: {
@@ -2200,7 +2213,43 @@ export type Database = {
         }[]
       }
       remove_team_member: { Args: { p_user_id: string }; Returns: undefined }
+      revenue_summary: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          charge_point_id: string
+          charge_point_name: string
+          driver_group_id: string
+          driver_group_name: string
+          energy_wh: number
+          idle_s: number
+          location_id: string
+          location_name: string
+          sessions: number
+          subtotal_sen: number
+          tax_sen: number
+          total_sen: number
+          unbillable_sessions: number
+        }[]
+      }
       rollup_meter_values: { Args: { p_since?: string }; Returns: undefined }
+      run_invoice: {
+        Args: {
+          p_billing_account_id: string
+          p_due_days?: number
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: string
+      }
+      run_settlement: {
+        Args: {
+          p_location_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: string
+      }
+      seller_snapshot: { Args: { p_tenant: string }; Returns: Json }
       set_team_member_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
@@ -2209,6 +2258,7 @@ export type Database = {
         Args: { p_stale_after?: string }
         Returns: number
       }
+      void_document: { Args: { p_document_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

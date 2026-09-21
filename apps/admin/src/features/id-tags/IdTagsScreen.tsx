@@ -6,7 +6,7 @@ import { useAuth } from '@/app/auth';
 import { useCreateIdTag, useDeleteIdTag, useIdTags, useUpdateIdTag } from './hooks';
 import { IdTagModal } from './IdTagModal';
 import { KIND_LABELS, STATUS_LABELS } from './types';
-import type { IdTag, IdTagInsert } from './types';
+import type { IdTagInsert, IdTagWithAccount } from './types';
 
 const FILTERS = ['All', 'Active', 'Blocked', 'Expired'] as const;
 
@@ -105,7 +105,7 @@ export function IdTagsScreen() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: C.seasalt }}>
-              {['Tag', 'Label', 'Kind', 'Status', 'Expires', 'Added'].map((h) => (
+              {['Tag', 'Label', 'Bills to', 'Kind', 'Status', 'Expires', 'Added'].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -171,7 +171,15 @@ export function IdTagsScreen() {
   );
 }
 
-function Row({ t, onClick, clickable }: { t: IdTag; onClick: () => void; clickable: boolean }) {
+function Row({
+  t,
+  onClick,
+  clickable,
+}: {
+  t: IdTagWithAccount;
+  onClick: () => void;
+  clickable: boolean;
+}) {
   const expiredByDate = t.expires_at && new Date(t.expires_at) < new Date();
   return (
     <tr
@@ -192,6 +200,7 @@ function Row({ t, onClick, clickable }: { t: IdTag; onClick: () => void; clickab
         {t.tag}
       </td>
       <td style={{ padding: '13px 16px', color: C.ink }}>{t.label ?? '—'}</td>
+      <td style={{ padding: '13px 16px', color: C.slate }}>{t.billing_account_name ?? 'ad-hoc'}</td>
       <td style={{ padding: '13px 16px', color: C.slate }}>{KIND_LABELS[t.kind] ?? t.kind}</td>
       <td style={{ padding: '13px 16px' }}>
         <Badge

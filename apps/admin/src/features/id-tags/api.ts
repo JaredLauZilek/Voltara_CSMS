@@ -1,14 +1,19 @@
 // The ONLY place `supabase.from('id_tags')` may appear.
 import { supabase } from '@/shared/lib/supabase';
-import type { IdTag, IdTagInsert, IdTagUpdate } from './types';
+import type { IdTag, IdTagInsert, IdTagUpdate, IdTagWithAccount } from './types';
 
-export async function listIdTags(): Promise<IdTag[]> {
+export async function listIdTags(): Promise<IdTagWithAccount[]> {
   const { data, error } = await supabase
     .from('id_tags')
-    .select('*')
+    .select('*, billing_accounts(name)')
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row) => {
+    const { billing_accounts, ...tag } = row as unknown as IdTag & {
+      billing_accounts: { name: string } | null;
+    };
+    return { ...tag, billing_account_name: billing_accounts?.name ?? null };
+  });
 }
 
 export async function createIdTag(row: IdTagInsert): Promise<IdTag> {
