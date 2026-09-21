@@ -78,17 +78,30 @@ interface LocalClock {
 
 const DOW = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'] as const;
 
+// Intl.DateTimeFormat construction dominates the engine's cost; one
+// formatter per zone makes pricing a session tens of times cheaper.
+const clockFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(timeZone: string): Intl.DateTimeFormat {
+  let f = clockFormatters.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour12: false,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      weekday: 'short',
+    });
+    clockFormatters.set(timeZone, f);
+  }
+  return f;
+}
+
 function localClock(at: Date, timeZone: string): LocalClock {
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    hour12: false,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    weekday: 'short',
-  }).formatToParts(at);
+  const parts = formatterFor(timeZone).formatToParts(at);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
   const hour = Number(get('hour')) % 24;
   const minute = Number(get('minute'));

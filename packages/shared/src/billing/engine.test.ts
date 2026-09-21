@@ -248,35 +248,41 @@ describe('invariants (randomised)', () => {
     TARIFF_PRESETS.sessionFeePlusKwh(200, 100),
   ];
 
-  it('lines always sum to the totals, amounts are integers, tax ≥ 0, and pricing is monotonic in energy', () => {
-    for (let i = 0; i < 400; i += 1) {
-      const periods = randomPeriods();
-      const elements = tariffs[i % tariffs.length];
-      const rate = [0, 600, 800][i % 3];
-      const inclusive = i % 2 === 0;
-      const cost = priceSession(
-        periods,
-        snapshot(elements, { tax_rate_bps: rate, tax_included: inclusive }),
-      );
+  // 400 priced sessions; generous budget so a CPU-starved CI runner (the full
+  // turbo matrix on two cores) never turns a slow run into a false failure.
+  it(
+    'lines always sum to the totals, amounts are integers, tax ≥ 0, and pricing is monotonic in energy',
+    { timeout: 60_000 },
+    () => {
+      for (let i = 0; i < 400; i += 1) {
+        const periods = randomPeriods();
+        const elements = tariffs[i % tariffs.length];
+        const rate = [0, 600, 800][i % 3];
+        const inclusive = i % 2 === 0;
+        const cost = priceSession(
+          periods,
+          snapshot(elements, { tax_rate_bps: rate, tax_included: inclusive }),
+        );
 
-      expect(cost.lines.reduce((s, l) => s + l.amountExclSen, 0)).toBe(cost.subtotalSen);
-      expect(cost.lines.reduce((s, l) => s + l.taxSen, 0)).toBe(cost.taxSen);
-      expect(cost.subtotalSen + cost.taxSen).toBe(cost.totalSen);
-      for (const l of cost.lines) {
-        expect(Number.isInteger(l.amountExclSen)).toBe(true);
-        expect(l.amountInclSen).toBe(l.amountExclSen + l.taxSen);
-        expect(l.taxSen).toBeGreaterThanOrEqual(0);
+        expect(cost.lines.reduce((s, l) => s + l.amountExclSen, 0)).toBe(cost.subtotalSen);
+        expect(cost.lines.reduce((s, l) => s + l.taxSen, 0)).toBe(cost.taxSen);
+        expect(cost.subtotalSen + cost.taxSen).toBe(cost.totalSen);
+        for (const l of cost.lines) {
+          expect(Number.isInteger(l.amountExclSen)).toBe(true);
+          expect(l.amountInclSen).toBe(l.amountExclSen + l.taxSen);
+          expect(l.taxSen).toBeGreaterThanOrEqual(0);
+        }
+        if (rate === 0) expect(cost.taxSen).toBe(0);
+
+        // More energy in the same periods can never cost less.
+        const more = priceSession(
+          periods.map((p) => ({ ...p, energyWh: p.energyWh * 2 })),
+          snapshot(elements, { tax_rate_bps: rate, tax_included: inclusive }),
+        );
+        expect(more.totalSen).toBeGreaterThanOrEqual(cost.totalSen);
       }
-      if (rate === 0) expect(cost.taxSen).toBe(0);
-
-      // More energy in the same periods can never cost less.
-      const more = priceSession(
-        periods.map((p) => ({ ...p, energyWh: p.energyWh * 2 })),
-        snapshot(elements, { tax_rate_bps: rate, tax_included: inclusive }),
-      );
-      expect(more.totalSen).toBeGreaterThanOrEqual(cost.totalSen);
-    }
-  });
+    },
+  );
 
   it('is independent of how a period is sliced (no ToU boundaries)', () => {
     for (let i = 0; i < 100; i += 1) {
