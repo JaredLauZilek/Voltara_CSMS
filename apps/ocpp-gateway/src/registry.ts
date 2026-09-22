@@ -12,6 +12,8 @@ export interface ChargerConnection {
   identity: string;
   chargePointId: string;
   tenantId: string;
+  /** The site the charger sits at, for the public status channel. */
+  locationId: string | null;
   quirks: Quirks;
   remoteAddress: string | null;
   connectedAt: Date;

@@ -114,12 +114,16 @@ export async function handleBootNotification(
     'charger booted',
   );
 
-  ctx.realtime.cpStatus(connection.tenantId, {
-    chargePointId: connection.chargePointId,
-    ocppIdentity: connection.identity,
-    connectionState: 'online',
-    at: new Date().toISOString(),
-  });
+  ctx.realtime.cpStatus(
+    connection.tenantId,
+    {
+      chargePointId: connection.chargePointId,
+      ocppIdentity: connection.identity,
+      connectionState: 'online',
+      at: new Date().toISOString(),
+    },
+    connection.locationId,
+  );
 
   return {
     status: 'Accepted',
@@ -184,13 +188,17 @@ export async function handleStatusNotification(
 
   await mirrorStatusOntoOpenSession(ctx, req.connectorId, status, recordedAt);
 
-  ctx.realtime.cpStatus(connection.tenantId, {
-    chargePointId: connection.chargePointId,
-    ocppIdentity: connection.identity,
-    connectionState: 'online',
-    connector: { ocppConnectorId: req.connectorId, status, errorCode },
-    at: recordedAt.toISOString(),
-  });
+  ctx.realtime.cpStatus(
+    connection.tenantId,
+    {
+      chargePointId: connection.chargePointId,
+      ocppIdentity: connection.identity,
+      connectionState: 'online',
+      connector: { ocppConnectorId: req.connectorId, status, errorCode },
+      at: recordedAt.toISOString(),
+    },
+    connection.locationId,
+  );
 
   return {};
 }
@@ -292,7 +300,8 @@ export async function handleStartTransaction(
     startedAt,
     offline,
     reservationId: req.reservationId ?? null,
-    startSource: 'rfid',
+    // A virtual (app) tag means the driver app started this session.
+    startSource: idTagId && req.idTag.startsWith('APP-') ? 'app' : 'rfid',
     tariff: resolved
       ? {
           tariffVersionId: resolved.tariffVersionId,

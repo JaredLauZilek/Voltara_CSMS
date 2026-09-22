@@ -160,6 +160,7 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
           accept({
             chargePointId: cp.id,
             tenantId: cp.tenant_id,
+            locationId: cp.location_id,
             identity,
             remoteAddress,
             quirks: resolveQuirks(cp.vendor_quirks, cp.quirks_override),
@@ -209,6 +210,7 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
         accept({
           chargePointId: cp.id,
           tenantId: cp.tenant_id,
+          locationId: cp.location_id,
           identity,
           remoteAddress,
           quirks: resolveQuirks(cp.vendor_quirks, cp.quirks_override),
@@ -225,6 +227,7 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
     const session = client.session as {
       chargePointId: string;
       tenantId: string;
+      locationId: string | null;
       identity: string;
       remoteAddress: string | null;
       quirks: ReturnType<typeof resolveQuirks>;
@@ -237,6 +240,7 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
       identity: session.identity,
       chargePointId: session.chargePointId,
       tenantId: session.tenantId,
+      locationId: session.locationId ?? null,
       quirks: session.quirks,
       remoteAddress: session.remoteAddress,
       connectedAt: new Date(),
@@ -317,12 +321,16 @@ export function createOcppServer(deps: OcppServerDeps): OcppServer {
           if (stillCurrent && !registry.getByIdentity(session.identity)) {
             await unregisterConnection(db, session.identity, config.GATEWAY_INSTANCE);
             await markOffline(db, session.chargePointId);
-            realtime.cpStatus(session.tenantId, {
-              chargePointId: session.chargePointId,
-              ocppIdentity: session.identity,
-              connectionState: 'offline',
-              at: new Date().toISOString(),
-            });
+            realtime.cpStatus(
+              session.tenantId,
+              {
+                chargePointId: session.chargePointId,
+                ocppIdentity: session.identity,
+                connectionState: 'offline',
+                at: new Date().toISOString(),
+              },
+              session.locationId,
+            );
           }
         } catch (err) {
           log.error({ err }, 'failed to record disconnection');

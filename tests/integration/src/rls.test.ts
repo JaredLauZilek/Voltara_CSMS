@@ -622,6 +622,94 @@ describe('documents (Phase 3 step 5)', () => {
   });
 });
 
+describe('driver access (Phase 4)', () => {
+  const DRIVER = '99999999-9999-4999-8999-999999999997';
+  const CP_A = '66666666-6666-4666-8666-666666666661';
+  const LOC_A = '33333333-3333-4333-8333-333333333331';
+  /** A driver: signed in, no tenant claims at all. */
+  const driver: Persona = {
+    role: 'authenticated',
+    claims: { sub: DRIVER, role: 'authenticated', app_metadata: {} },
+  };
+
+  async function seedDriverUser(tx: Tx) {
+    await tx.unsafe('set local role postgres');
+    await tx`
+      insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, email_change_token_new, email_change)
+      values (${DRIVER}, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'driver@example.com', '', now(), '{}', '{}', '', '', '', '')
+      on conflict (id) do nothing
+    `;
+    await tx.unsafe('set local role authenticated');
+  }
+
+  it('sees no tenant tables but can discover public chargers', async () => {
+    const r = await as(driver, async (tx) => {
+      await seedDriverUser(tx);
+      return {
+        tariffs: await tx`select 1 from public.tariffs`,
+        accounts: await tx`select 1 from public.billing_accounts`,
+        chargers:
+          await tx`select site_name, operator_name, tariff_text, connectors from public.driver_nearby_chargers(3.11, 101.57, 50, 50)`,
+      };
+    });
+    expect(r.tariffs).toHaveLength(0);
+    expect(r.accounts).toHaveLength(0);
+    expect(r.chargers.length).toBeGreaterThan(0);
+    expect(r.chargers[0].tariff_text).toBeTruthy();
+    expect(Object.keys(r.chargers[0])).not.toContain('auth_key_hash');
+  });
+
+  it('cannot start on a paid charger without joining; can after redeeming a code; then owns the session', async () => {
+    await as(driver, async (tx) => {
+      await seedDriverUser(tx);
+      await expect(
+        tx.savepoint((sp) => sp`select public.driver_start_session(${CP_A}::uuid, 1)`),
+      ).rejects.toThrow(/Join this site|offline/i);
+
+      await tx.unsafe('set local role postgres');
+      await tx`update public.charge_points set connection_state = 'online' where id = ${CP_A}`;
+      const [group] =
+        await tx`insert into public.driver_groups (tenant_id, name, kind) values (${TENANT_A}, 'Residents (test)', 'residents') returning id`;
+      await tx`insert into public.driver_join_codes (tenant_id, code, label, location_id, driver_group_id) values (${TENANT_A}, 'VANTAGE24', 'Vantage residents', ${LOC_A}, ${group.id})`;
+      await tx.unsafe('set local role authenticated');
+
+      const [{ driver_join_site: joined }] = await tx`select public.driver_join_site('vantage24')`;
+      expect(joined.tenant_id).toBe(TENANT_A);
+      const tags = await tx`select tag, kind, billing_account_id from public.id_tags`;
+      expect(tags).toHaveLength(1);
+      expect(tags[0].kind).toBe('virtual');
+      expect(tags[0].tag).toMatch(/^APP-[0-9A-F]{16}$/);
+      expect(tags[0].billing_account_id).not.toBeNull();
+
+      const [{ driver_start_session: started }] =
+        await tx`select public.driver_start_session(${CP_A}::uuid, 1)`;
+      expect(started.command_id).toBeTruthy();
+      const cmds =
+        await tx`select action, payload, status from public.remote_commands where id = ${started.command_id}`;
+      expect(cmds[0].action).toBe('RemoteStartTransaction');
+      expect((cmds[0].payload as { idTag: string }).idTag).toBe(tags[0].tag);
+
+      // Site context reflects membership and branding without tenant internals.
+      const [{ driver_site_context: ctx }] =
+        await tx`select public.driver_site_context(${LOC_A}::uuid)`;
+      expect(ctx.member_tag_id).toBe((await tx`select id from public.id_tags`)[0].id);
+      expect(ctx.groups).toEqual(['Residents (test)']);
+      expect(Object.keys(ctx)).not.toContain('auth_key_hash');
+    });
+  });
+
+  it('tenant B cannot see a driver join code of tenant A; the driver cannot read codes at all', async () => {
+    await as(personaA('admin'), async (tx) => {
+      await tx`insert into public.driver_join_codes (tenant_id, code, label) values (${TENANT_A}, 'SECRET99', 'x')`;
+      expect(await tx`select 1 from public.driver_join_codes where code = 'SECRET99'`).toHaveLength(
+        1,
+      );
+    });
+    expect(await as(personaB, (tx) => tx`select 1 from public.driver_join_codes`)).toHaveLength(0);
+    expect(await as(driver, (tx) => tx`select 1 from public.driver_join_codes`)).toHaveLength(0);
+  });
+});
+
 describe('tenants table visibility', () => {
   it('a plain member sees only their own tenant row', async () => {
     const rows = await as(personaB, (tx) => tx`select id from public.tenants`);

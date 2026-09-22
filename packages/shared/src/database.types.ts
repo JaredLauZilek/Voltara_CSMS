@@ -1134,6 +1134,110 @@ export type Database = {
           },
         ]
       }
+      driver_join_codes: {
+        Row: {
+          active: boolean
+          billing_account_id: string | null
+          code: string
+          created_at: string
+          driver_group_id: string | null
+          expires_at: string | null
+          id: string
+          label: string | null
+          location_id: string | null
+          max_uses: number | null
+          tenant_id: string
+          uses: number
+        }
+        Insert: {
+          active?: boolean
+          billing_account_id?: string | null
+          code: string
+          created_at?: string
+          driver_group_id?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          location_id?: string | null
+          max_uses?: number | null
+          tenant_id: string
+          uses?: number
+        }
+        Update: {
+          active?: boolean
+          billing_account_id?: string | null
+          code?: string
+          created_at?: string
+          driver_group_id?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          location_id?: string | null
+          max_uses?: number | null
+          tenant_id?: string
+          uses?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_join_codes_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_join_codes_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_join_codes_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_join_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+          vehicle_model: string | null
+          vehicle_plate: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_model?: string | null
+          vehicle_plate?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_model?: string | null
+          vehicle_plate?: string | null
+        }
+        Relationships: []
+      }
       evses: {
         Row: {
           charge_point_id: string
@@ -2168,6 +2272,40 @@ export type Database = {
       }
       create_receipt: { Args: { p_cdr_id: string }; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      driver_ensure_tag: { Args: { p_tenant: string }; Returns: string }
+      driver_join_site: { Args: { p_code: string }; Returns: Json }
+      driver_nearby_chargers: {
+        Args: {
+          p_lat?: number
+          p_limit?: number
+          p_lng?: number
+          p_radius_km?: number
+        }
+        Returns: {
+          address: string
+          charge_point_id: string
+          charge_point_name: string
+          city: string
+          connection_state: string
+          connectors: Json
+          distance_km: number
+          is_free: boolean
+          lat: number
+          lng: number
+          location_id: string
+          operator_name: string
+          site_name: string
+          site_type: string
+          tariff_text: string
+          tenant_id: string
+        }[]
+      }
+      driver_site_context: { Args: { p_location_id: string }; Returns: Json }
+      driver_start_session: {
+        Args: { p_charge_point_id: string; p_ocpp_connector_id: number }
+        Returns: Json
+      }
+      driver_stop_session: { Args: { p_session_id: string }; Returns: Json }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: never; Returns: boolean }
       is_tenant_operator: { Args: never; Returns: boolean }

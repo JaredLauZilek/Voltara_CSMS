@@ -9,6 +9,14 @@ export function tenantChannel(tenantId: string): string {
   return `tenant:${tenantId}`;
 }
 
+/**
+ * Public per-site channel for driver apps: connector status only. Readable
+ * by any signed-in user (RLS on realtime.messages allows `site:%`).
+ */
+export function siteChannel(locationId: string): string {
+  return `site:${locationId}`;
+}
+
 export const BROADCAST_EVENTS = {
   cpStatus: 'cp_status',
   sessionUpdate: 'session_update',

@@ -9,6 +9,9 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.turbo/**',
       'packages/shared/src/database.types.ts',
+      'apps/driver/.expo/**',
+      'apps/driver/metro.config.js',
+      'apps/driver/babel.config.js',
     ],
   },
   js.configs.recommended,
@@ -23,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/admin/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
+    files: ['apps/admin/**/*.{ts,tsx}', 'apps/driver/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: reactHooks.configs.recommended.rules,
   },

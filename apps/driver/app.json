@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Voltara",
+    "slug": "voltara-driver",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "voltara",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B512D"
+    },
+    "ios": {
+      "bundleIdentifier": "my.voltara.driver",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Voltara shows chargers near you.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "my.voltara.driver",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1B512D"
+      },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+    },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      ["expo-location", { "locationWhenInUsePermission": "Voltara shows chargers near you." }]
+    ],
+    "experiments": { "typedRoutes": true },
+    "extra": {
+      "eas": { "projectId": "" }
+    }
+  }
+}

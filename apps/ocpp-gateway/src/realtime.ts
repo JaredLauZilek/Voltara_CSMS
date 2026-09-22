@@ -1,5 +1,6 @@
 import {
   BROADCAST_EVENTS,
+  siteChannel,
   tenantChannel,
   type CpStatusEvent,
   type MeterEvent,
@@ -42,8 +43,15 @@ export class RealtimePublisher {
     return Boolean(this.endpoint && this.key);
   }
 
-  cpStatus(tenantId: string, payload: CpStatusEvent): void {
+  /**
+   * Connector status goes to the tenant's private channel (operators) and,
+   * when the charger has a site, to that site's public channel (drivers).
+   * The public copy carries the same payload — it holds nothing a public
+   * charger directory would not show.
+   */
+  cpStatus(tenantId: string, payload: CpStatusEvent, locationId?: string | null): void {
     this.send(tenantId, BROADCAST_EVENTS.cpStatus, payload);
+    if (locationId) this.sendTo(siteChannel(locationId), BROADCAST_EVENTS.cpStatus, payload);
   }
 
   sessionUpdate(tenantId: string, payload: SessionUpdateEvent): void {
@@ -72,6 +80,10 @@ export class RealtimePublisher {
   }
 
   private send(tenantId: string, event: string, payload: unknown): void {
+    this.sendTo(tenantChannel(tenantId), event, payload);
+  }
+
+  private sendTo(topic: string, event: string, payload: unknown): void {
     if (!this.endpoint || !this.key) return;
 
     void fetch(this.endpoint, {
@@ -82,7 +94,7 @@ export class RealtimePublisher {
         authorization: `Bearer ${this.key}`,
       },
       body: JSON.stringify({
-        messages: [{ topic: tenantChannel(tenantId), event, payload, private: true }],
+        messages: [{ topic, event, payload, private: true }],
       }),
     })
       .then((res) => {

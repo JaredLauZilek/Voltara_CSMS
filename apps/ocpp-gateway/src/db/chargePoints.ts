@@ -7,6 +7,7 @@ export interface ChargePointAuthRow {
   lifecycle: 'pending' | 'active' | 'decommissioned';
   security_profile: number;
   heartbeat_interval_s: number;
+  location_id: string | null;
   has_key: boolean;
   key_ok: boolean;
   vendor_name: string | null;
@@ -40,6 +41,7 @@ export async function findChargePointForAuth(
       cp.lifecycle,
       cp.security_profile,
       cp.heartbeat_interval_s,
+      cp.location_id,
       cp.auth_key_hash is not null as has_key,
       coalesce(
         cp.auth_key_hash is not null
