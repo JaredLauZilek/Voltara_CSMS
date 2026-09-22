@@ -34,14 +34,40 @@ export default function SignIn() {
     else setSent(true);
   };
 
+  /**
+   * Accepts the code from the email (Supabase's OTP length is configurable,
+   * 6–10 digits), or the whole sign-in link pasted from the email for devices
+   * the link cannot open. Gmail wraps links (google.com/url?q=…), so the
+   * pasted text is decoded until a token appears.
+   */
   const verify = async () => {
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.verifyOtp({
-      email: email.trim().toLowerCase(),
-      token: code.trim(),
-      type: 'email',
-    });
+    const raw = code.trim();
+    let err: { message: string } | null = null;
+    if (/^\d{6,10}$/.test(raw)) {
+      ({ error: err } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: raw,
+        type: 'email',
+      }));
+    } else {
+      let text = raw;
+      for (let i = 0; i < 3; i += 1) {
+        try {
+          text = decodeURIComponent(text);
+        } catch {
+          break;
+        }
+      }
+      const hash = /token_hash=([^&\s]+)/.exec(text)?.[1] ?? /[?&]token=([^&\s]+)/.exec(text)?.[1];
+      if (!hash) {
+        setBusy(false);
+        setError('Paste the code or the full sign-in link from the email.');
+        return;
+      }
+      ({ error: err } = await supabase.auth.verifyOtp({ token_hash: hash, type: 'magiclink' }));
+    }
     setBusy(false);
     if (err) setError(err.message);
     else router.replace('/(tabs)');
@@ -107,29 +133,29 @@ export default function SignIn() {
                   We sent a link to <Text style={{ fontWeight: '700' }}>{email.trim()}</Text>. Tap
                   it on this phone to sign in.
                 </Body>
-                <Body muted>Or enter the code from the same email:</Body>
+                <Body muted>Or enter the code from that email — or paste the whole link:</Body>
                 <TextInput
                   value={code}
                   onChangeText={setCode}
-                  placeholder="123456"
-                  keyboardType="number-pad"
-                  maxLength={6}
+                  placeholder="Code from the email, or the sign-in link"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  multiline
                   style={{
                     borderWidth: 1,
                     borderColor: C.border,
                     borderRadius: 10,
                     padding: 12,
-                    fontSize: 20,
-                    letterSpacing: 6,
-                    textAlign: 'center',
+                    fontSize: 16,
+                    minHeight: 56,
                     backgroundColor: C.white,
                   }}
                 />
                 <Button
-                  title="Sign in with code"
+                  title="Sign in"
                   onPress={verify}
                   loading={busy}
-                  disabled={code.trim().length !== 6}
+                  disabled={code.trim().length < 6}
                 />
                 <Button
                   title="Use a different email"
