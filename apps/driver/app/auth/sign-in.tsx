@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { C } from '@/lib/theme';
@@ -9,7 +10,7 @@ import { Body, Button, Card, Label, Screen, Title } from '@/lib/ui';
  * Email magic link. Supabase emails a link that opens the app via the
  * voltara:// scheme (in Expo Go: the exp:// URL). The paste box is the
  * fallback when the link cannot open this device — including local dev,
- * where the email lands in Mailpit — using the 6-digit OTP the same email
+ * where the email lands in Mailpit — using the OTP the same email
  * carries.
  */
 export default function SignIn() {
@@ -22,9 +23,11 @@ export default function SignIn() {
   const send = async () => {
     setBusy(true);
     setError(null);
+    // The link must come back to THIS build: voltara://auth in a store build,
+    // exp://… while running in Expo Go. Linking.createURL knows which.
     const { error: err } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: 'voltara://auth', shouldCreateUser: true },
+      options: { emailRedirectTo: Linking.createURL('auth'), shouldCreateUser: true },
     });
     setBusy(false);
     if (err) setError(err.message);
@@ -104,7 +107,7 @@ export default function SignIn() {
                   We sent a link to <Text style={{ fontWeight: '700' }}>{email.trim()}</Text>. Tap
                   it on this phone to sign in.
                 </Body>
-                <Body muted>Or enter the 6-digit code from the same email:</Body>
+                <Body muted>Or enter the code from the same email:</Body>
                 <TextInput
                   value={code}
                   onChangeText={setCode}
