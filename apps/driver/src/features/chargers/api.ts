@@ -28,7 +28,10 @@ export interface NearbyCharger {
   is_free: boolean;
 }
 
-export async function nearbyChargers(lat: number | null, lng: number | null): Promise<NearbyCharger[]> {
+export async function nearbyChargers(
+  lat: number | null,
+  lng: number | null,
+): Promise<NearbyCharger[]> {
   const { data, error } = await supabase.rpc('driver_nearby_chargers', {
     p_lat: lat ?? undefined,
     p_lng: lng ?? undefined,
@@ -36,7 +39,10 @@ export async function nearbyChargers(lat: number | null, lng: number | null): Pr
     p_limit: 200,
   });
   if (error) throw error;
-  return (data ?? []).map((r) => ({ ...r, connectors: (r.connectors as unknown as ConnectorInfo[]) ?? [] }));
+  return (data ?? []).map((r) => ({
+    ...r,
+    connectors: (r.connectors as unknown as ConnectorInfo[]) ?? [],
+  }));
 }
 
 export interface SiteContext {
@@ -58,14 +64,22 @@ export async function siteContext(locationId: string): Promise<SiteContext> {
   return data as unknown as SiteContext;
 }
 
-export async function joinSite(code: string): Promise<{ tenant_id: string; location_id: string | null; label: string | null }> {
+export async function joinSite(
+  code: string,
+): Promise<{ tenant_id: string; location_id: string | null; label: string | null }> {
   const { data, error } = await supabase.rpc('driver_join_site', { p_code: code });
   if (error) throw error;
   return data as unknown as { tenant_id: string; location_id: string | null; label: string | null };
 }
 
-export async function startSession(chargePointId: string, connectorId: number): Promise<{ command_id: string }> {
-  const { data, error } = await supabase.rpc('driver_start_session', { p_charge_point_id: chargePointId, p_ocpp_connector_id: connectorId });
+export async function startSession(
+  chargePointId: string,
+  connectorId: number,
+): Promise<{ command_id: string }> {
+  const { data, error } = await supabase.rpc('driver_start_session', {
+    p_charge_point_id: chargePointId,
+    p_ocpp_connector_id: connectorId,
+  });
   if (error) throw error;
   return data as unknown as { command_id: string };
 }
@@ -76,8 +90,14 @@ export async function stopSession(sessionId: string): Promise<{ command_id: stri
   return data as unknown as { command_id: string };
 }
 
-export async function commandStatus(commandId: string): Promise<{ status: string; error: string | null } | null> {
-  const { data, error } = await supabase.from('remote_commands').select('status, error').eq('id', commandId).maybeSingle();
+export async function commandStatus(
+  commandId: string,
+): Promise<{ status: string; error: string | null } | null> {
+  const { data, error } = await supabase
+    .from('remote_commands')
+    .select('status, error')
+    .eq('id', commandId)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }

@@ -23,7 +23,9 @@ export default function Charging() {
   }, []);
 
   const latest = minutes[minutes.length - 1];
-  const energyWh = latest ? Math.max(0, Number(latest.energy_wh ?? 0) - Number(session?.meter_start_wh ?? 0)) : 0;
+  const energyWh = latest
+    ? Math.max(0, Number(latest.energy_wh ?? 0) - Number(session?.meter_start_wh ?? 0))
+    : 0;
   const powerW = latest ? Number(latest.avg_power_w ?? 0) : 0;
   const elapsedS = session ? Math.max(0, (now - new Date(session.started_at).getTime()) / 1000) : 0;
 
@@ -48,7 +50,9 @@ export default function Charging() {
     return (
       <Screen>
         <Empty>No session running.{'\n'}Pick a charger, plug in, and press Start.</Empty>
-        <View style={{ padding: 16 }}><Button title="Find a charger" onPress={() => router.replace('/(tabs)')} /></View>
+        <View style={{ padding: 16 }}>
+          <Button title="Find a charger" onPress={() => router.replace('/(tabs)')} />
+        </View>
       </Screen>
     );
   }
@@ -59,29 +63,77 @@ export default function Charging() {
     <Screen>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
         <Card style={{ backgroundColor: C.green, borderColor: C.green, gap: 4 }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 0.6 }}>{session.status === 'active' ? 'Charging' : session.status === 'suspended' ? 'Paused by the car' : session.status}</Text>
-          <Text style={{ fontSize: 44, fontWeight: '800', color: C.yellow, letterSpacing: -1 }}>{(energyWh / 1000).toFixed(2)} <Text style={{ fontSize: 20 }}>kWh</Text></Text>
-          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>{powerW > 0 ? `${(powerW / 1000).toFixed(1)} kW now · ` : ''}{mm}:{String(ss).padStart(2, '0')} elapsed</Text>
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.7)',
+              textTransform: 'uppercase',
+              letterSpacing: 0.6,
+            }}
+          >
+            {session.status === 'active'
+              ? 'Charging'
+              : session.status === 'suspended'
+                ? 'Paused by the car'
+                : session.status}
+          </Text>
+          <Text style={{ fontSize: 44, fontWeight: '800', color: C.yellow, letterSpacing: -1 }}>
+            {(energyWh / 1000).toFixed(2)} <Text style={{ fontSize: 20 }}>kWh</Text>
+          </Text>
+          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
+            {powerW > 0 ? `${(powerW / 1000).toFixed(1)} kW now · ` : ''}
+            {mm}:{String(ss).padStart(2, '0')} elapsed
+          </Text>
         </Card>
 
         <Card style={{ gap: 6 }}>
           <Label>Running cost</Label>
-          <Text style={{ fontSize: 30, fontWeight: '800', color: C.green, fontFamily: 'monospace' }}>{cost ? billing.formatSen(cost.totalSen) : '—'}</Text>
-          <Body muted style={{ fontSize: 12 }}>{(session.tariff_snapshot as { display_text?: string } | null)?.display_text ?? 'Priced by the operator when the session ends'}{cost && cost.taxSen > 0 ? ` · incl. ${billing.formatSen(cost.taxSen)} tax` : ''}</Body>
+          <Text
+            style={{ fontSize: 30, fontWeight: '800', color: C.green, fontFamily: 'monospace' }}
+          >
+            {cost ? billing.formatSen(cost.totalSen) : '—'}
+          </Text>
+          <Body muted style={{ fontSize: 12 }}>
+            {(session.tariff_snapshot as { display_text?: string } | null)?.display_text ??
+              'Priced by the operator when the session ends'}
+            {cost && cost.taxSen > 0 ? ` · incl. ${billing.formatSen(cost.taxSen)} tax` : ''}
+          </Body>
           {cost?.lines.map((l, i) => (
-            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Body muted style={{ fontSize: 12 }}>{l.label}</Body><Body style={{ fontSize: 12, fontFamily: 'monospace' }}>{billing.formatSen(l.amountInclSen)}</Body></View>
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Body muted style={{ fontSize: 12 }}>
+                {l.label}
+              </Body>
+              <Body style={{ fontSize: 12, fontFamily: 'monospace' }}>
+                {billing.formatSen(l.amountInclSen)}
+              </Body>
+            </View>
           ))}
         </Card>
 
         <Card style={{ gap: 4 }}>
           <Label>Where</Label>
-          <Title>{session.charge_points?.locations?.name ?? session.charge_points?.name ?? 'Charger'}</Title>
-          <Body muted>{session.charge_points?.name} · connector {session.ocpp_connector_id}</Body>
+          <Title>
+            {session.charge_points?.locations?.name ?? session.charge_points?.name ?? 'Charger'}
+          </Title>
+          <Body muted>
+            {session.charge_points?.name} · connector {session.ocpp_connector_id}
+          </Body>
         </Card>
 
         {stop.error && <Body style={{ color: C.error }}>{(stop.error as Error).message}</Body>}
-        <Button title={stop.isPending ? 'Stopping…' : 'Stop charging'} variant="danger" onPress={() => stop.mutate(session.id, { onSuccess: () => router.replace(`/session/${session.id}`) })} loading={stop.isPending} />
-        <Body muted style={{ fontSize: 12, textAlign: 'center' }}>Energy updates about once a minute. Idle time after charging ends may be charged — check the site's rate.</Body>
+        <Button
+          title={stop.isPending ? 'Stopping…' : 'Stop charging'}
+          variant="danger"
+          onPress={() =>
+            stop.mutate(session.id, { onSuccess: () => router.replace(`/session/${session.id}`) })
+          }
+          loading={stop.isPending}
+        />
+        <Body muted style={{ fontSize: 12, textAlign: 'center' }}>
+          Energy updates about once a minute. Idle time after charging ends may be charged — check
+          the site's rate.
+        </Body>
       </ScrollView>
     </Screen>
   );

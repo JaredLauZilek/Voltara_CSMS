@@ -34,7 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const hash = url.split('#')[1];
       if (hash) for (const [k, v] of new URLSearchParams(hash)) params[k] = v;
       if (params.access_token && params.refresh_token) {
-        await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token });
+        await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        });
       } else if (params.code) {
         await supabase.auth.exchangeCodeForSession(params.code);
       }

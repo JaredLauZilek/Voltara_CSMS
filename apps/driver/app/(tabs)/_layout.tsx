@@ -19,10 +19,40 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: C.seasalt },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Chargers', tabBarIcon: ({ color, size }) => <Ionicons name="flash" size={size} color={color} /> }} />
-      <Tabs.Screen name="charging" options={{ title: 'Charging', tabBarIcon: ({ color, size }) => <Ionicons name="battery-charging" size={size} color={color} /> }} />
-      <Tabs.Screen name="history" options={{ title: 'History', tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Chargers',
+          tabBarIcon: ({ color, size }) => <Ionicons name="flash" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="charging"
+        options={{
+          title: 'Charging',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="battery-charging" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="receipt-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

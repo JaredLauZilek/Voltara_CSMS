@@ -34,7 +34,11 @@ export default function SignIn() {
   const verify = async () => {
     setBusy(true);
     setError(null);
-    const { error: err } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+    const { error: err } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: code.trim(),
+      type: 'email',
+    });
     setBusy(false);
     if (err) setError(err.message);
     else router.replace('/(tabs)');
@@ -42,10 +46,25 @@ export default function SignIn() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 96, gap: 20 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{ padding: 24, paddingTop: 96, gap: 20 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={{ alignItems: 'center', gap: 8 }}>
-            <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' }}>
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 16,
+                backgroundColor: C.green,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Text style={{ fontSize: 28, color: C.yellow }}>⚡</Text>
             </View>
             <Title>Voltara</Title>
@@ -63,13 +82,28 @@ export default function SignIn() {
                   autoCapitalize="none"
                   autoComplete="email"
                   keyboardType="email-address"
-                  style={{ borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 16, backgroundColor: C.white }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    borderRadius: 10,
+                    padding: 12,
+                    fontSize: 16,
+                    backgroundColor: C.white,
+                  }}
                 />
-                <Button title="Email me a sign-in link" onPress={send} loading={busy} disabled={!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)} />
+                <Button
+                  title="Email me a sign-in link"
+                  onPress={send}
+                  loading={busy}
+                  disabled={!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)}
+                />
               </>
             ) : (
               <>
-                <Body>We sent a link to <Text style={{ fontWeight: '700' }}>{email.trim()}</Text>. Tap it on this phone to sign in.</Body>
+                <Body>
+                  We sent a link to <Text style={{ fontWeight: '700' }}>{email.trim()}</Text>. Tap
+                  it on this phone to sign in.
+                </Body>
                 <Body muted>Or enter the 6-digit code from the same email:</Body>
                 <TextInput
                   value={code}
@@ -77,16 +111,40 @@ export default function SignIn() {
                   placeholder="123456"
                   keyboardType="number-pad"
                   maxLength={6}
-                  style={{ borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 20, letterSpacing: 6, textAlign: 'center', backgroundColor: C.white }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: C.border,
+                    borderRadius: 10,
+                    padding: 12,
+                    fontSize: 20,
+                    letterSpacing: 6,
+                    textAlign: 'center',
+                    backgroundColor: C.white,
+                  }}
                 />
-                <Button title="Sign in with code" onPress={verify} loading={busy} disabled={code.trim().length !== 6} />
-                <Button title="Use a different email" variant="secondary" onPress={() => { setSent(false); setCode(''); }} />
+                <Button
+                  title="Sign in with code"
+                  onPress={verify}
+                  loading={busy}
+                  disabled={code.trim().length !== 6}
+                />
+                <Button
+                  title="Use a different email"
+                  variant="secondary"
+                  onPress={() => {
+                    setSent(false);
+                    setCode('');
+                  }}
+                />
               </>
             )}
             {error && <Body style={{ color: C.error }}>{error}</Body>}
           </Card>
 
-          <Body muted style={{ textAlign: 'center', fontSize: 12 }}>No password to remember. By continuing you agree to the operator's charging terms shown at each site.</Body>
+          <Body muted style={{ textAlign: 'center', fontSize: 12 }}>
+            No password to remember. By continuing you agree to the operator's charging terms shown
+            at each site.
+          </Body>
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>

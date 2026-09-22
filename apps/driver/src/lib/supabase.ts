@@ -8,7 +8,9 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!url || !anonKey) {
-  console.warn('EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY missing — see apps/driver/.env.example');
+  console.warn(
+    'EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY missing — see apps/driver/.env.example',
+  );
 }
 
 // Sessions live in the device keychain. SecureStore caps values at 2 KB on
@@ -21,7 +23,8 @@ const secureStorage = {
     const count = await SecureStore.getItemAsync(`${key}.n`);
     if (!count) return SecureStore.getItemAsync(key);
     let out = '';
-    for (let i = 0; i < Number(count); i += 1) out += (await SecureStore.getItemAsync(`${key}.${i}`)) ?? '';
+    for (let i = 0; i < Number(count); i += 1)
+      out += (await SecureStore.getItemAsync(`${key}.${i}`)) ?? '';
     return out;
   },
   async setItem(key: string, value: string) {
@@ -31,14 +34,16 @@ const secureStorage = {
       return SecureStore.setItemAsync(key, value);
     }
     const parts = Math.ceil(value.length / CHUNK);
-    for (let i = 0; i < parts; i += 1) await SecureStore.setItemAsync(`${key}.${i}`, value.slice(i * CHUNK, (i + 1) * CHUNK));
+    for (let i = 0; i < parts; i += 1)
+      await SecureStore.setItemAsync(`${key}.${i}`, value.slice(i * CHUNK, (i + 1) * CHUNK));
     await SecureStore.setItemAsync(`${key}.n`, String(parts));
     await SecureStore.deleteItemAsync(key);
   },
   async removeItem(key: string) {
     if (Platform.OS === 'web') return void globalThis.localStorage?.removeItem(key);
     const count = await SecureStore.getItemAsync(`${key}.n`);
-    for (let i = 0; i < Number(count ?? 0); i += 1) await SecureStore.deleteItemAsync(`${key}.${i}`);
+    for (let i = 0; i < Number(count ?? 0); i += 1)
+      await SecureStore.deleteItemAsync(`${key}.${i}`);
     await SecureStore.deleteItemAsync(`${key}.n`);
     await SecureStore.deleteItemAsync(key);
   },

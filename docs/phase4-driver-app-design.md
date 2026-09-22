@@ -10,15 +10,15 @@ MVP scope: sign in by email magic link · find chargers (list + map, live availa
 
 ## 2. Who a driver is
 
-A driver is a **person with an `auth.users` row and no tenant membership**. The JWT hook injects nothing for them, so every tenant-scoped policy already denies them — the driver layer only *adds* access, keyed on `auth.uid()`:
+A driver is a **person with an `auth.users` row and no tenant membership**. The JWT hook injects nothing for them, so every tenant-scoped policy already denies them — the driver layer only _adds_ access, keyed on `auth.uid()`:
 
-| Table | Driver may |
-|---|---|
-| `driver_profiles` (new) | read/update their own row |
-| `id_tags` | read tags where `driver_user_id = auth.uid()` (their virtual tags) |
-| `charging_sessions`, `cdrs`, `documents` (receipts) | read rows linked to their tags / accounts |
-| `remote_commands` | nothing directly — start/stop go through `driver_start_session()` / `driver_stop_session()` |
-| everything else | nothing |
+| Table                                               | Driver may                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `driver_profiles` (new)                             | read/update their own row                                                                   |
+| `id_tags`                                           | read tags where `driver_user_id = auth.uid()` (their virtual tags)                          |
+| `charging_sessions`, `cdrs`, `documents` (receipts) | read rows linked to their tags / accounts                                                   |
+| `remote_commands`                                   | nothing directly — start/stop go through `driver_start_session()` / `driver_stop_session()` |
+| everything else                                     | nothing                                                                                     |
 
 Charger **discovery is cross-tenant** (a driver in Bangsar sees every public charger nearby regardless of operator), so it is a SECURITY DEFINER function returning only what a public directory would: site name, coordinates, connector types/power, live status, the tariff's display text. Never the tenant's internals.
 

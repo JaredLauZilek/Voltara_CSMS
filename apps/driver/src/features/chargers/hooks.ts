@@ -12,7 +12,9 @@ export function useCoords() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return void (!cancelled && setCoords(null));
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         if (!cancelled) setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       } catch {
         if (!cancelled) setCoords(null);
@@ -35,7 +37,11 @@ export function useNearbyChargers(coords: { lat: number; lng: number } | null | 
 }
 
 export function useSiteContext(locationId: string | null) {
-  return useQuery({ queryKey: ['site', locationId], queryFn: () => api.siteContext(locationId!), enabled: Boolean(locationId) });
+  return useQuery({
+    queryKey: ['site', locationId],
+    queryFn: () => api.siteContext(locationId!),
+    enabled: Boolean(locationId),
+  });
 }
 
 export function useJoinSite() {
@@ -53,7 +59,13 @@ export function useJoinSite() {
 export function useStartSession() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ chargePointId, connectorId }: { chargePointId: string; connectorId: number }) => {
+    mutationFn: async ({
+      chargePointId,
+      connectorId,
+    }: {
+      chargePointId: string;
+      connectorId: number;
+    }) => {
       const { command_id } = await api.startSession(chargePointId, connectorId);
       const deadline = Date.now() + 40_000;
       while (Date.now() < deadline) {
