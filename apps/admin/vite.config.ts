@@ -24,6 +24,19 @@ export default defineConfig({
         ws: true,
         rewrite: (path) => path.replace(/^\/supabase/, ''),
       },
+      // Dev page probes (features/dev-tools): the gateway's health endpoint
+      // and the Expo dev server's manifest, which are equally unreachable
+      // from a browser outside the codespace.
+      '/gateway': {
+        target: process.env.LOCAL_GATEWAY_URL ?? 'http://127.0.0.1:9221',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/gateway/, ''),
+      },
+      '/expo': {
+        target: process.env.LOCAL_EXPO_URL ?? 'http://127.0.0.1:8081',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/expo/, ''),
+      },
     },
   },
 });

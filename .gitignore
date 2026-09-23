@@ -18,3 +18,7 @@ supabase/.branches/
 .DS_Store
 .claude/
 coverage/
+
+# local dev orchestration
+.env.dev.local
+apps/admin/public/dev-phone.json

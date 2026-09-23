@@ -24,17 +24,30 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 
 ## Everyday commands
 
-| Command                                      | Does                                                                                |
-| -------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `pnpm dev`                                   | admin + gateway in watch mode                                                       |
-| `pnpm db:reset`                              | re-applies all migrations + seed                                                    |
-| `pnpm gen:types`                             | regenerates `packages/shared/src/database.types.ts` — run after **every** migration |
-| `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                     |
-| `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                          |
-| `pnpm exec supabase migration new <topic>`   | new migration file                                                                  |
-| `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
-| `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324   |
-| `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)   |
+| Command                                      | Does                                                                                 |
+| -------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `pnpm dev:all`                               | **everything**, idempotently: Supabase · gateway · admin · Expo tunnel for the phone |
+| `pnpm dev`                                   | admin + gateway only, in watch mode                                                  |
+| `pnpm db:reset`                              | re-applies all migrations + seed                                                     |
+| `pnpm gen:types`                             | regenerates `packages/shared/src/database.types.ts` — run after **every** migration  |
+| `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                      |
+| `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                           |
+| `pnpm exec supabase migration new <topic>`   | new migration file                                                                   |
+| `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                           |
+| `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324    |
+| `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)    |
+
+### Coming back after a pause
+
+Dev servers die with the codespace. `pnpm dev:all` restarts only what died and
+prints the phone link; the same link is on the admin app under **Dev → Phone &
+services** as a QR, with a health pill per service. The Expo tunnel address is
+stable across restarts (it is derived from `apps/driver/.expo/settings.json`), so
+Expo Go on the phone keeps working — it only needs the server to be awake.
+
+`pnpm dev:all` reads two gitignored files: `.env.gateway.local` (gateway
+database URL and service-role key) and `.env.dev.local` (`EXPO_TOKEN`, an
+Expo access token from expo.dev → Account settings → Access tokens).
 
 To put a **real charger** on the platform, see [deploy-gateway.md](deploy-gateway.md) —
 it covers the Fly.io deploy, the charger's settings, and how to confirm it connected.

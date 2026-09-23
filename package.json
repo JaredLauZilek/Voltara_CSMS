@@ -21,7 +21,9 @@
     "db:reset": "supabase db reset",
     "db:stop": "supabase stop",
     "register:charger": "pnpm --filter @voltara/ocpp-gateway register:charger",
-    "sim:session": "pnpm --filter @voltara/ocpp-gateway sim:session"
+    "sim:session": "pnpm --filter @voltara/ocpp-gateway sim:session",
+    "dev:all": "node scripts/dev.mjs",
+    "dev:phone": "node scripts/dev.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
@@ -31,7 +33,8 @@
     "supabase": "^2.31.8",
     "turbo": "^2.5.0",
     "typescript": "~5.5.3",
-    "typescript-eslint": "^8.2.0"
+    "typescript-eslint": "^8.2.0",
+    "qrcode": "^1.5.4"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

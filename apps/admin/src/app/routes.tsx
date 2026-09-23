@@ -3,7 +3,7 @@
 // Unlike the accounting dashboard's useState<ScreenId> shell, this app uses
 // real URLs — charger/session deep links must be shareable.
 
-import type { ComponentType } from 'react';
+import { lazy, Suspense, type ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   AlertTriangle,
@@ -17,6 +17,7 @@ import {
   Receipt,
   Settings,
   ScrollText,
+  Smartphone,
   Tags,
   Users,
   UsersRound,
@@ -44,6 +45,24 @@ export interface RouteDef {
   screen: ComponentType;
 }
 
+// Dev-only: the phone link + local service health. The lazy import lives
+// inside a function that only the DEV branch below calls, so a production
+// build neither registers the route nor bundles the chunk.
+function devRoute(): RouteDef {
+  const Lazy = lazy(() =>
+    import('@/features/dev-tools').then((m) => ({ default: m.DevToolsScreen })),
+  );
+  return {
+    path: '/dev',
+    title: 'Dev',
+    screen: () => (
+      <Suspense fallback={null}>
+        <Lazy />
+      </Suspense>
+    ),
+  };
+}
+
 export const ROUTES: RouteDef[] = [
   { path: '/overview', title: 'Overview', screen: OverviewScreen },
   { path: '/charge-points', title: 'Chargers', screen: ChargePointsFeature },
@@ -60,6 +79,7 @@ export const ROUTES: RouteDef[] = [
   { path: '/reports', title: 'Reports', screen: ReportsScreen },
   { path: '/team', title: 'Team', screen: TeamScreen },
   { path: '/operator', title: 'Operator', screen: OperatorSettingsScreen },
+  ...(import.meta.env.DEV ? [devRoute()] : []),
 ];
 
 /** Where "/" lands. */
@@ -115,6 +135,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { path: '/operator', label: 'Operator', icon: Settings },
     ],
   },
+  ...(import.meta.env.DEV
+    ? [{ label: 'Dev', items: [{ path: '/dev', label: 'Phone & services', icon: Smartphone }] }]
+    : []),
 ];
 
 export function titleFor(pathname: string): string {
