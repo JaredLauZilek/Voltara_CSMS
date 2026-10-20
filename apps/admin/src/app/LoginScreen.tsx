@@ -24,7 +24,12 @@ const inputStyle: React.CSSProperties = {
   boxSizing: 'border-box',
 };
 
-export function LoginScreen() {
+interface Props {
+  /** Dev only: why auto-login did not get us in (AuthGate sets it). */
+  devNotice?: string | null;
+}
+
+export function LoginScreen({ devNotice = null }: Props = {}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +96,23 @@ export function LoginScreen() {
             Sign in to your operator account.
           </div>
         </div>
+
+        {devNotice && (
+          <div
+            style={{
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: C.warning,
+              background: C.warningBg,
+              borderRadius: 10,
+              padding: '10px 12px',
+            }}
+          >
+            {devNotice}
+            <br />
+            Is the local stack up? Run <code>pnpm dev:all</code>, then refresh.
+          </div>
+        )}
 
         <div>
           <label htmlFor="voltara-login-email" style={labelStyle}>

@@ -38,6 +38,9 @@ const DEV_AUTO_LOGIN =
 export function AuthGate({ children }: Props) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Why dev auto-login did not get us in, shown on the form so a dead local
+  // stack is not mistaken for the feature having been removed.
+  const [devNotice, setDevNotice] = useState<string | null>(null);
   // Once per page load: after an explicit sign-out the form must stay visible,
   // otherwise "Sign out" in dev would just bounce straight back in.
   const autoLoginTried = useRef(false);
@@ -47,7 +50,10 @@ export function AuthGate({ children }: Props) {
       if (!data.session && DEV_AUTO_LOGIN && !autoLoginTried.current) {
         autoLoginTried.current = true;
         const { data: signedIn, error } = await supabase.auth.signInWithPassword(DEV_AUTO_LOGIN);
-        if (error) console.warn('dev auto-login failed — showing the login form:', error.message);
+        if (error) {
+          console.warn('dev auto-login failed — showing the login form:', error.message);
+          setDevNotice(`Dev auto-login as ${DEV_AUTO_LOGIN.email} failed: ${error.message}`);
+        }
         setSession(signedIn?.session ?? null);
         setLoading(false);
         return;
@@ -77,7 +83,7 @@ export function AuthGate({ children }: Props) {
     );
   }
 
-  if (!session) return <LoginScreen />;
+  if (!session) return <LoginScreen devNotice={devNotice} />;
 
   const claims = decodeClaims(session.access_token);
 
