@@ -85,19 +85,31 @@ if it is lost, register a new charger or rotate rather than trying to recover it
 
 Field names vary by vendor; the values do not.
 
-| Setting                                  | Value                                             |
-| ---------------------------------------- | ------------------------------------------------- |
-| OCPP version                             | 1.6J (JSON over WebSocket)                        |
-| Central System / Server URL              | `wss://voltara-gateway-staging.fly.dev/ocpp`      |
-| Charge Point ID / Identity               | the identity you registered, e.g. `VLT-BENCH-001` |
-| Basic Auth username                      | the same identity                                 |
-| Basic Auth password / `AuthorizationKey` | the printed key                                   |
-| Security profile                         | 2                                                 |
+**Two URL dialects exist.** Spec-style firmware takes a full `wss://` URL. A
+large class — most Chinese AC units, including the HKZN 7 kW wallboxes Voltara
+commissions — takes `host:port/path` in one field with **no scheme**, and a
+separate TLS toggle supplies it. Those units do not infer the port from the
+scheme: leave `:80` / `:443` out and they dial the wrong port and the gateway
+never sees them. The admin's credentials step shows both forms for every
+registered charger.
+
+| Setting                                  | Value                                                      |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| OCPP version                             | 1.6J (JSON over WebSocket)                                 |
+| Server URL — spec-style firmware         | `wss://voltara-gateway-staging.fly.dev/ocpp`               |
+| Server URL — host:port dialect, TLS ON   | `voltara-gateway-staging.fly.dev:443/ocpp`                 |
+| Server URL — host:port dialect, TLS OFF  | `voltara-gateway-staging.fly.dev:80/ocpp` (profile 0 or 1) |
+| Charge Point ID / Identity               | the identity you registered, e.g. `VLT-BENCH-001`          |
+| Basic Auth username                      | the same identity (profiles 1 and 2; ignored at 0)         |
+| Basic Auth password / `AuthorizationKey` | the printed key (profiles 1 and 2; ignored at 0)           |
+| Security profile                         | 2 by default; 1 = Basic Auth without TLS; 0 = ID only      |
 
 Some firmware wants the identity appended to the URL instead of a separate
-field: `wss://voltara-gateway-staging.fly.dev/ocpp/VLT-BENCH-001`. If the
-charger has a "Security Profile" selector, choose 2 (TLS + Basic Auth); if it
-only offers 0/1, it will not connect — that is deliberate.
+field: `…/ocpp/VLT-BENCH-001`. The security profile is a property of the
+charger's registration (CLAUDE.md §10), not something the charger chooses: a
+profile-2 charger attempting plaintext is rejected with `tls required` in its
+connection log; a profile-0 charger is accepted on its ID alone, over `ws://`
+or `wss://`, whatever credentials it does or does not send.
 
 ## 6. Confirm it worked
 
