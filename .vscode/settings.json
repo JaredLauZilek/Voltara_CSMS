@@ -1,0 +1,15 @@
+{
+  // Codespaces port forwarding: open only the admin app in the browser.
+  // Everything else is forwarded silently — the gateway (9221) speaks OCPP,
+  // not HTML, so opening it just shows {"ok":false,"error":"not_found"}.
+  "remote.portsAttributes": {
+    "5173": { "label": "Admin (local)", "onAutoForward": "openBrowserOnce" },
+    "5174": { "label": "Admin (staging)", "onAutoForward": "silent" },
+    "9221": { "label": "OCPP gateway", "onAutoForward": "silent" },
+    "8081": { "label": "Expo (driver app)", "onAutoForward": "silent" },
+    "54321": { "label": "Supabase API", "onAutoForward": "silent" },
+    "54322": { "label": "Postgres", "onAutoForward": "silent" },
+    "54324": { "label": "Mailpit", "onAutoForward": "silent" }
+  },
+  "remote.otherPortsAttributes": { "onAutoForward": "silent" }
+}
