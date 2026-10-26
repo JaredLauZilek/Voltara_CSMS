@@ -39,13 +39,13 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 
 ### Coming back after a pause
 
-Dev servers die with the codespace. `pnpm dev:all` restarts only what died and
+Dev servers die with the codespace. `pnpm dev` restarts only what died and
 prints the phone link; the same link is on the admin app under **Dev → Phone &
 services** as a QR, with a health pill per service. The Expo tunnel address is
 stable across restarts (it is derived from `apps/driver/.expo/settings.json`), so
 Expo Go on the phone keeps working — it only needs the server to be awake.
 
-`pnpm dev:all` reads two gitignored files: `.env.gateway.local` (gateway
+`pnpm dev` reads two gitignored files: `.env.gateway.local` (gateway
 database URL and service-role key) and `.env.dev.local` (`EXPO_TOKEN`, an
 Expo access token from expo.dev → Account settings → Access tokens).
 

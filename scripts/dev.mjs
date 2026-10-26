@@ -2,7 +2,7 @@
 /**
  * One command to bring the whole local stack up, idempotently:
  *
- *   pnpm dev:all
+ *   pnpm dev
  *
  * Supabase (with the codespace firewall fix) · the OCPP gateway · the admin
  * app · the Expo tunnel for the phone. Anything already running is left

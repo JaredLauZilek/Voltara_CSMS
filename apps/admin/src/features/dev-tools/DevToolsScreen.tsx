@@ -35,7 +35,7 @@ const STATE_PILL: Record<
 /**
  * Dev-only page (never registered in production builds): the phone link for
  * the driver app as a QR, and whether each local service answers. Data comes
- * from scripts/dev.mjs (`pnpm dev:all`), which writes public/dev-phone.json.
+ * from scripts/dev.mjs (`pnpm dev`), which writes public/dev-phone.json.
  */
 export function DevToolsScreen() {
   const { data: phone } = usePhoneLink();
@@ -102,13 +102,13 @@ export function DevToolsScreen() {
               </button>
               <p style={{ margin: '12px 0 0', fontSize: 12, color: C.slate }}>
                 The address never changes. If the app says it cannot connect, the dev server is
-                asleep — run <code style={mono}>pnpm dev:all</code> in the codespace and reload.
+                asleep — run <code style={mono}>pnpm dev</code> in the codespace and reload.
               </p>
             </div>
           </div>
         ) : (
           <div style={{ padding: 32, color: C.slate, fontSize: 14, textAlign: 'center' }}>
-            No phone link yet. Run <code style={mono}>pnpm dev:all</code> in the codespace.
+            No phone link yet. Run <code style={mono}>pnpm dev</code> in the codespace.
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { useEffect, useState, type ReactNode } from 'react';
+import type { AuthError, Session } from '@supabase/supabase-js';
 import { C, VoltaraLogo } from '@voltara/ui';
 import { supabase } from '@/shared/lib/supabase';
 import { decodeClaims } from '@/shared/lib/claims';
@@ -12,11 +12,13 @@ interface Props {
 
 /**
  * Dev-only auto sign-in. Set VITE_DEV_AUTO_LOGIN_EMAIL / _PASSWORD in
- * `.env.local` (gitignored) to skip the login screen against the local stack.
- * Double-gated: the variables only exist locally, AND `import.meta.env.DEV`
- * is false in every production bundle, so this can never fire on a deploy.
- * It still performs a real sign-in — RLS and the tenant claims hook are
- * exercised exactly as they are for a human at the form.
+ * `.env.local` (gitignored) and the login screen is never rendered: the app
+ * signs in by itself and, if the local stack is down, waits for it and
+ * retries. Double-gated: the variables only exist locally, AND
+ * `import.meta.env.DEV` is false in every production bundle, so this can
+ * never fire on a deploy. It still performs a real sign-in — RLS and the
+ * tenant claims hook are exercised exactly as they are for a human at the
+ * form. The login screen is production behaviour only until launch.
  */
 const DEV_AUTO_LOGIN =
   import.meta.env.DEV &&
@@ -28,9 +30,19 @@ const DEV_AUTO_LOGIN =
       }
     : null;
 
+const DEV_RETRY_MS = 3_000;
+
+/** A fetch that never reached Supabase surfaces as an empty message. */
+function describeAuthError(error: AuthError | null): string {
+  const msg = error?.message?.trim();
+  return msg && msg !== '{}' ? msg : 'the local Supabase stack is not reachable';
+}
+
 /**
  * Real Supabase Auth (unlike the accounting dashboard's PasswordGate). Renders:
- *  - LoginScreen while signed out,
+ *  - in dev with auto-login configured: a "connecting" notice until the local
+ *    stack answers, then the app — never the login screen;
+ *  - LoginScreen while signed out (production, or dev without auto-login),
  *  - a "no tenant" notice when the JWT carries no tenant claim (user exists
  *    but has no membership — the auth hook injected nothing),
  *  - the app inside AuthContext otherwise.
@@ -38,82 +50,86 @@ const DEV_AUTO_LOGIN =
 export function AuthGate({ children }: Props) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  // Why dev auto-login did not get us in, shown on the form so a dead local
-  // stack is not mistaken for the feature having been removed.
-  const [devNotice, setDevNotice] = useState<string | null>(null);
-  // Once per page load: after an explicit sign-out the form must stay visible,
-  // otherwise "Sign out" in dev would just bounce straight back in.
-  const autoLoginTried = useRef(false);
+  const [devError, setDevError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session && DEV_AUTO_LOGIN && !autoLoginTried.current) {
-        autoLoginTried.current = true;
-        const { data: signedIn, error } = await supabase.auth.signInWithPassword(DEV_AUTO_LOGIN);
-        if (error) {
-          console.warn('dev auto-login failed — showing the login form:', error.message);
-          setDevNotice(`Dev auto-login as ${DEV_AUTO_LOGIN.email} failed: ${error.message}`);
-        }
-        setSession(signedIn?.session ?? null);
-        setLoading(false);
+    let cancelled = false;
+    let attempting = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+
+    const devSignIn = async () => {
+      if (!DEV_AUTO_LOGIN || attempting || cancelled) return;
+      attempting = true;
+      const { data, error } = await supabase.auth.signInWithPassword(DEV_AUTO_LOGIN);
+      attempting = false;
+      if (cancelled) return;
+      if (error || !data.session) {
+        setDevError(describeAuthError(error));
+        retry = setTimeout(devSignIn, DEV_RETRY_MS);
         return;
       }
+      setDevError(null);
+      setSession(data.session);
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
       setSession(data.session);
       setLoading(false);
+      if (!data.session) void devSignIn();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
+      // Dev: a sign-out or an expired session just signs straight back in.
+      if (!next) void devSignIn();
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      if (retry) clearTimeout(retry);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: C.seasalt,
-        }}
-      >
+      <div style={centred}>
         <VoltaraLogo height={36} />
       </div>
     );
   }
 
-  if (!session) return <LoginScreen devNotice={devNotice} />;
+  if (!session) {
+    if (!DEV_AUTO_LOGIN) return <LoginScreen />;
+    return (
+      <div style={{ ...centred, padding: 20, fontFamily: 'Figtree' }}>
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <VoltaraLogo height={36} />
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.green }}>
+            {devError ? 'Waiting for the local stack' : 'Signing in…'}
+          </div>
+          <div style={{ fontSize: 13, color: C.slate, lineHeight: 1.5 }}>
+            {devError ? (
+              <>
+                {devError[0].toUpperCase() + devError.slice(1)}.<br />
+                Run <code>pnpm dev</code> in the codespace — this page retries on its own.
+              </>
+            ) : (
+              <>Dev sign-in as {DEV_AUTO_LOGIN.email}.</>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const claims = decodeClaims(session.access_token);
 
   if (!claims.tenant_id || !claims.tenant_role) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: C.seasalt,
-          padding: 20,
-          fontFamily: 'Figtree',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 420,
-            background: C.white,
-            borderRadius: 20,
-            border: `1px solid ${C.border}`,
-            padding: 32,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-            textAlign: 'center',
-          }}
-        >
+      <div style={{ ...centred, padding: 20, fontFamily: 'Figtree' }}>
+        <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <VoltaraLogo height={36} />
           </div>
@@ -157,3 +173,24 @@ export function AuthGate({ children }: Props) {
     </AuthContext.Provider>
   );
 }
+
+const centred: React.CSSProperties = {
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: C.seasalt,
+};
+
+const card: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 420,
+  background: C.white,
+  borderRadius: 20,
+  border: `1px solid ${C.border}`,
+  padding: 32,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 14,
+  textAlign: 'center',
+};
