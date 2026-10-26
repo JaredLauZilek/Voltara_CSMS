@@ -55,17 +55,20 @@ export function DevToolsScreen() {
         <div style={label}>Driver app on your phone</div>
         {phone?.url ? (
           <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div
+            {/* As an <img> so the SVG scales to the box instead of its fixed 280px. */}
+            <img
+              src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(phone.qrSvg ?? '')}`}
+              alt="QR code for the driver app"
               style={{
                 width: 200,
                 height: 200,
                 flexShrink: 0,
+                boxSizing: 'border-box',
                 borderRadius: 12,
                 border: `1px solid ${C.border}`,
                 padding: 8,
                 background: C.white,
               }}
-              dangerouslySetInnerHTML={{ __html: phone.qrSvg ?? '' }}
             />
             <div style={{ flex: 1, minWidth: 220 }}>
               <p style={{ margin: '0 0 8px', fontSize: 14, color: C.ink }}>
