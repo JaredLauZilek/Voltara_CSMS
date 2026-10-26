@@ -27,9 +27,9 @@ const STATE_PILL: Record<
   ServiceState,
   { label: string; colours: (typeof STATUS_COLORS)[keyof typeof STATUS_COLORS] }
 > = {
-  up: { label: 'Up', colours: STATUS_COLORS.green },
-  down: { label: 'Down', colours: STATUS_COLORS.red },
-  checking: { label: 'Checking…', colours: STATUS_COLORS.grey },
+  up: { label: 'Up', colours: STATUS_COLORS.Available },
+  down: { label: 'Down', colours: STATUS_COLORS.Offline },
+  checking: { label: 'Checking…', colours: STATUS_COLORS.Unknown },
 };
 
 /**
