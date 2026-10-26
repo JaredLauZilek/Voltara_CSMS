@@ -2,6 +2,14 @@
 
 This file is loaded by every Claude Code session in this repo. Read it before making changes. It locks in the visual identity, the architecture, and the tenancy/security model; any code that lands here — including external code being merged in — must conform to all three.
 
+## §0 Current mode: lean prototyping (until the pre-production review)
+
+We are prototyping and building the product, not operating it. Until a deliberate **pre-production review** (one pass before launch that re-enables and hardens what is parked here), optimise for speed and a small footprint:
+
+- **Keep the codespace lean and clean.** 32 GB disk. Install nothing the repo does not use; prefer caches that can be wiped; delete superseded tool versions, build outputs and stray artefacts as you go. Local Supabase runs without Studio and imgproxy (`supabase/config.toml`). Unused preinstalled toolchains (Java/sdkman, .NET, Conda, Go) have been removed — do not reinstall them.
+- **Production-grade extras are held back, not built now:** dev conveniences (auto sign-in, no login screen in dev) stay on; hardening, observability, deploy automation and polish beyond what a feature needs to be tried are deferred to the review. Note anything deferred in `docs/roadmap.md` so the review has a list.
+- **The locked contracts below still apply** (tenancy/RLS, brand tokens, architecture, OCPP rules). Lean means less tooling and less ceremony, never weaker tenant isolation or secrets in browser code.
+
 ## §1 Product & monorepo map
 
 Voltara CSMS is a **dual-purpose** platform: it runs **Voltara's own** EV charging business (public/commercial CPO sites, condo/strata deployments, home charging — Voltara is tenant #1 and the reference deployment) **and** is sold white-label to other Malaysian CPOs, condo JMBs, and workplace operators. Consequence: every feature must work tenant-generically. Nothing may be hardcoded to Voltara except the _default_ theme.

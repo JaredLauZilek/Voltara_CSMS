@@ -8,13 +8,13 @@ Node 22+, pnpm 10 (via corepack), Docker (for the local Supabase stack). The Sup
 
 ```bash
 pnpm install
-pnpm db:start          # boots local Supabase (Postgres/Auth/Realtime/Studio) + applies migrations & seed
+pnpm db:start          # boots local Supabase (Postgres/Auth/Realtime/Storage; Studio is off) + applies migrations & seed
 cp apps/admin/.env.example apps/admin/.env.local
 # paste the anon key printed by `pnpm exec supabase status` into .env.local
 pnpm dev               # admin on :5173, gateway health on :9221
 ```
 
-Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, platform admin) and `ops@democpo.test` / `demo-dev` (Demo CPO — the second tenant that proves isolation). Studio: http://127.0.0.1:54323.
+Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, platform admin) and `ops@democpo.test` / `demo-dev` (Demo CPO — the second tenant that proves isolation). Studio is disabled to keep the codespace lean — inspect data with `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
 
 **Codespaces:** the browser runs on your machine, not in the container, so the admin app reaches
 local Supabase through the Vite dev-server proxy (`VITE_SUPABASE_URL=/supabase`) — only port 5173

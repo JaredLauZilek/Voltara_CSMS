@@ -92,7 +92,9 @@ enabled = true
 # max_header_length = 4096
 
 [studio]
-enabled = true
+# Off while prototyping (lean codespace, CLAUDE.md §0): saves the Studio and
+# postgres-meta images. Browse data with psql or the Supabase MCP instead.
+enabled = false
 # Port to use for Supabase Studio.
 port = 54323
 # External URL of the API server that frontend connects to.
@@ -128,9 +130,10 @@ file_size_limit = "50MiB"
 [storage.s3_protocol]
 enabled = true
 
-# Image transformation API is available to Supabase Pro plan.
-# [storage.image_transformation]
-# enabled = true
+# Image transformation API is available to Supabase Pro plan. Off locally so the
+# CLI does not pull and run imgproxy (lean codespace, CLAUDE.md §0).
+[storage.image_transformation]
+enabled = false
 
 # Store analytical data in S3 for running ETL jobs over Iceberg Catalog
 # This feature is only available on the hosted platform.
