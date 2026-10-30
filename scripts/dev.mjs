@@ -126,27 +126,32 @@ async function supabase() {
     (await httpOk('http://127.0.0.1:54321/auth/v1/health')) &&
     (await httpOk('http://127.0.0.1:54321/rest/v1/', [200, 401]));
   if (await healthy()) return 'already running';
-  // After a codespace restart the containers survive in an `exited` state and
-  // `supabase start` refuses with "already running … container is not running:
-  // exited". `supabase stop` clears them; data stays in the Docker volume.
+  // After a codespace restart some containers survive `exited` (often Auth
+  // while the database comes back up). `supabase start` then either refuses
+  // ("container is not running: exited") or assumes the stack is up, and
+  // Kong keeps answering 503 with a cached DNS miss for the dead container.
+  // Restart whatever is exited, then Kong, before falling back to start.
   const exited = await exec('docker', [
     'ps',
     '-a',
     '--filter',
-    'name=supabase_db_',
+    'name=supabase_',
     '--filter',
     'status=exited',
     '--format',
     '{{.Names}}',
   ]).then(
-    ({ stdout }) => stdout.trim().length > 0,
-    () => false,
+    ({ stdout }) => stdout.split('\n').filter(Boolean),
+    () => [],
   );
-  if (exited) {
-    console.log('  clearing Supabase containers left exited by a restart (data is kept)…');
-    await exec('pnpm', ['exec', 'supabase', 'stop'], { cwd: root, maxBuffer: 1 << 24 }).catch(
-      () => {},
+  if (exited.length) {
+    console.log(
+      `  restarting Supabase containers stopped by a codespace restart (${exited.length})…`,
     );
+    await exec('docker', ['start', ...exited]).catch(() => {});
+    const kong = exited.find((n) => n.startsWith('supabase_kong_')) ?? 'supabase_kong_Voltara_CSMS';
+    await exec('docker', ['restart', kong]).catch(() => {});
+    if (await waitFor('supabase', healthy, { timeoutMs: 60_000 })) return 'restarted';
   }
   console.log('  starting the local Supabase stack (this takes a minute)…');
   await exec('pnpm', ['exec', 'supabase', 'start'], { cwd: root, maxBuffer: 1 << 24 }).catch(
