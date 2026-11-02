@@ -104,14 +104,14 @@ export function DevToolsScreen() {
                 {copied ? 'Copied' : 'Copy address'}
               </button>
               <p style={{ margin: '12px 0 0', fontSize: 12, color: C.slate }}>
-                The address never changes. If the app says it cannot connect, the dev server is
-                asleep — run <code style={mono}>pnpm dev</code> in the codespace and reload.
+                The address never changes. If the app says it cannot connect, the dev server is off
+                — run <code style={mono}>pnpm dev:phone</code> in the codespace and reload.
               </p>
             </div>
           </div>
         ) : (
           <div style={{ padding: 32, color: C.slate, fontSize: 14, textAlign: 'center' }}>
-            No phone link yet. Run <code style={mono}>pnpm dev</code> in the codespace.
+            Phone server off. Run <code style={mono}>pnpm dev:phone</code> in the codespace.
           </div>
         )}
       </div>

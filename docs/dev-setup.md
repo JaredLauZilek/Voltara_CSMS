@@ -24,18 +24,19 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 
 ## Everyday commands
 
-| Command                                      | Does                                                                                 |
-| -------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `pnpm dev:all`                               | **everything**, idempotently: Supabase · gateway · admin · Expo tunnel for the phone |
-| `pnpm dev`                                   | admin + gateway only, in watch mode                                                  |
-| `pnpm db:reset`                              | re-applies all migrations + seed                                                     |
-| `pnpm gen:types`                             | regenerates `packages/shared/src/database.types.ts` — run after **every** migration  |
-| `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                      |
-| `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                           |
-| `pnpm exec supabase migration new <topic>`   | new migration file                                                                   |
-| `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                           |
-| `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324    |
-| `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)    |
+| Command                                      | Does                                                                                |
+| -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm dev`                                   | Supabase · gateway · admin, idempotently (restarts only what died)                  |
+| `pnpm dev:phone`                             | the same, plus the Expo tunnel for testing the driver app on a phone                |
+| `pnpm dev:apps`                              | admin + gateway only, in watch mode (assumes Supabase is up)                        |
+| `pnpm db:reset`                              | re-applies all migrations + seed                                                    |
+| `pnpm gen:types`                             | regenerates `packages/shared/src/database.types.ts` — run after **every** migration |
+| `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                     |
+| `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                          |
+| `pnpm exec supabase migration new <topic>`   | new migration file                                                                  |
+| `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
+| `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324   |
+| `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)   |
 
 ### Coming back after a pause
 

@@ -115,7 +115,9 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# Off while prototyping (CLAUDE.md §0): nothing uses Storage yet; turning it
+# off also drops imgproxy. Re-enable when uploads (charger photos) land.
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
@@ -380,7 +382,9 @@ authorization_url_path = "/oauth/consent"
 allow_dynamic_registration = false
 
 [edge_runtime]
-enabled = true
+# Off while prototyping (CLAUDE.md §0): saves a 1.1 GB image and a container.
+# Only admin-invite uses it — invites work on staging, not locally.
+enabled = false
 # Supported request policies: `oneshot`, `per_worker`.
 # `per_worker` (default) — enables hot reload during local development.
 # `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).

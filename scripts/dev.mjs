@@ -2,7 +2,8 @@
 /**
  * One command to bring the whole local stack up, idempotently:
  *
- *   pnpm dev
+ *   pnpm dev          Supabase · gateway · admin
+ *   pnpm dev:phone    the same, plus the Expo tunnel for the driver app
  *
  * Supabase (with the codespace firewall fix) · the OCPP gateway · the admin
  * app · the Expo tunnel for the phone. Anything already running is left
@@ -152,12 +153,18 @@ async function supabase() {
     const kong = exited.find((n) => n.startsWith('supabase_kong_')) ?? 'supabase_kong_Voltara_CSMS';
     await exec('docker', ['restart', kong]).catch(() => {});
     if (await waitFor('supabase', healthy, { timeoutMs: 60_000 })) return 'restarted';
+    // Some restarts leave containers unstartable ("RWLayer … unexpectedly
+    // nil"). `supabase stop` removes them; the data volume is kept.
+    console.log('  containers could not be restarted — recreating them (data is kept)…');
+    await exec('pnpm', ['exec', 'supabase', 'stop'], { cwd: root, maxBuffer: 1 << 24 }).catch(
+      () => {},
+    );
   }
   console.log('  starting the local Supabase stack (this takes a minute)…');
   await exec('pnpm', ['exec', 'supabase', 'start'], { cwd: root, maxBuffer: 1 << 24 }).catch(
     () => {},
   );
-  return (await waitFor('supabase', healthy, { timeoutMs: 240_000 })) ? 'started' : 'FAILED';
+  return (await waitFor('supabase', healthy, { timeoutMs: 420_000 })) ? 'started' : 'FAILED';
 }
 
 async function gateway() {
@@ -245,9 +252,10 @@ async function publishPhoneLink(url) {
 console.log(c.bold('\nVoltara — local development\n'));
 await fixFirewall();
 const results = { supabase: await supabase(), gateway: await gateway(), admin: await admin() };
-const ex = await expo();
+const WANT_PHONE = process.argv.includes('--phone');
+const ex = WANT_PHONE ? await expo() : { status: 'off (pnpm dev:phone to start)' };
 results.expo = ex.status;
-await publishPhoneLink(ex.url);
+if (WANT_PHONE) await publishPhoneLink(ex.url);
 
 const codespace = process.env.CODESPACE_NAME
   ? `https://${process.env.CODESPACE_NAME}-5173.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN ?? 'app.github.dev'}`
@@ -255,7 +263,9 @@ const codespace = process.env.CODESPACE_NAME
 
 console.log('');
 for (const [k, v] of Object.entries(results)) {
-  console.log(`  ${/FAIL|SKIP/.test(v) ? c.red('✗') : c.green('✓')} ${k.padEnd(9)} ${v}`);
+  console.log(
+    `  ${/FAIL|SKIP/.test(v) && !/^off/.test(v) ? c.red('✗') : c.green('✓')} ${k.padEnd(9)} ${v}`,
+  );
 }
 console.log(`\n  ${c.bold('Admin')}  ${codespace}`);
 if (ex.url) {
