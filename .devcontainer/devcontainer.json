@@ -1,0 +1,29 @@
+// Slim dev container for this repo (CLAUDE.md §0, lean prototyping).
+// Replaces GitHub's ~22 GB "universal" default image with plain Ubuntu plus
+// only what the repo uses: Node 22 (pnpm via corepack), Docker for the local
+// Supabase stack, and the GitHub CLI. Apply with "Codespaces: Rebuild
+// Container"; /workspaces (code and gitignored .env files) is kept.
+{
+  "name": "Voltara CSMS",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "sudo corepack enable && corepack install && pnpm install",
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": { "label": "Admin (local)", "onAutoForward": "openBrowserOnce" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "silent" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
