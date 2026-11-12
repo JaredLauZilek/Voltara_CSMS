@@ -569,6 +569,7 @@ export type Database = {
         Row: {
           auth_key_hash: string | null
           config: Json
+          config_readonly: string[] | null
           connection_state: string
           created_at: string
           firmware_version: string | null
@@ -580,10 +581,11 @@ export type Database = {
           location_id: string | null
           model_id: string | null
           model_reported: string | null
-          name: string
+          name: string | null
           ocpp_identity: string
           ocpp_version: string
           quirks_override: Json
+          registered_serial: string | null
           security_profile: number
           serial_number: string | null
           tenant_id: string
@@ -593,6 +595,7 @@ export type Database = {
         Insert: {
           auth_key_hash?: string | null
           config?: Json
+          config_readonly?: string[] | null
           connection_state?: string
           created_at?: string
           firmware_version?: string | null
@@ -604,10 +607,11 @@ export type Database = {
           location_id?: string | null
           model_id?: string | null
           model_reported?: string | null
-          name: string
+          name?: string | null
           ocpp_identity: string
           ocpp_version?: string
           quirks_override?: Json
+          registered_serial?: string | null
           security_profile?: number
           serial_number?: string | null
           tenant_id: string
@@ -617,6 +621,7 @@ export type Database = {
         Update: {
           auth_key_hash?: string | null
           config?: Json
+          config_readonly?: string[] | null
           connection_state?: string
           created_at?: string
           firmware_version?: string | null
@@ -628,10 +633,11 @@ export type Database = {
           location_id?: string | null
           model_id?: string | null
           model_reported?: string | null
-          name?: string
+          name?: string | null
           ocpp_identity?: string
           ocpp_version?: string
           quirks_override?: Json
+          registered_serial?: string | null
           security_profile?: number
           serial_number?: string | null
           tenant_id?: string
@@ -831,6 +837,7 @@ export type Database = {
           last_error_code: string | null
           max_kw: number | null
           ocpp_connector_id: number
+          parking_lot: string | null
           status: string
           status_updated_at: string | null
           tenant_id: string
@@ -844,6 +851,7 @@ export type Database = {
           last_error_code?: string | null
           max_kw?: number | null
           ocpp_connector_id: number
+          parking_lot?: string | null
           status?: string
           status_updated_at?: string | null
           tenant_id: string
@@ -857,6 +865,7 @@ export type Database = {
           last_error_code?: string | null
           max_kw?: number | null
           ocpp_connector_id?: number
+          parking_lot?: string | null
           status?: string
           status_updated_at?: string | null
           tenant_id?: string
@@ -2339,10 +2348,13 @@ export type Database = {
         Args: {
           p_connector_count?: number
           p_connector_type?: string
+          p_guns?: Json
           p_location_id?: string
           p_max_kw?: number
-          p_name: string
+          p_model_id?: string
+          p_name?: string
           p_ocpp_identity?: string
+          p_serial_number?: string
         }
         Returns: {
           auth_key: string
