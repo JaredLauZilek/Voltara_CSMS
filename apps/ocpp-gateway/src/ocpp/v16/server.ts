@@ -17,6 +17,7 @@ import { resolveQuirks } from '../../quirks/index.js';
 import type { RealtimePublisher } from '../../realtime.js';
 import type { WebhookDispatcher } from '../../webhooks.js';
 import type { ChargerConnection, ConnectionRegistry } from '../../registry.js';
+import { configurationSnapshot } from './configuration.js';
 import { FrameLogger } from './frameLog.js';
 import * as handlers from './handlers.js';
 import type { HandlerContext } from './handlers.js';
@@ -442,17 +443,14 @@ function scheduleConfigurationSnapshot(
   setTimeout(() => {
     void (async () => {
       try {
-        const response = (await client.call('GetConfiguration', {})) as {
-          configurationKey?: { key: string; value?: string; readonly?: boolean }[];
-          unknownKey?: string[];
-        };
-        const snapshot: Record<string, unknown> = {};
-        for (const entry of response?.configurationKey ?? []) {
-          // Never persist the charger's own credential.
-          snapshot[entry.key] = ocpp16.isSecretConfigKey(entry.key) ? '[redacted]' : entry.value;
-        }
-        await saveConfigurationSnapshot(deps.db, ctx.connection.chargePointId, snapshot);
-        ctx.logger.info({ keys: Object.keys(snapshot).length }, 'configuration snapshot stored');
+        const snapshot = configurationSnapshot(await client.call('GetConfiguration', {}));
+        await saveConfigurationSnapshot(
+          deps.db,
+          ctx.connection.chargePointId,
+          snapshot.values,
+          snapshot.readonlyKeys,
+        );
+        ctx.logger.info({ keys: snapshot.reportedKeys.length }, 'configuration snapshot stored');
       } catch (err) {
         // Plenty of chargers do not implement GetConfiguration; that is not an
         // error worth waking anyone for.

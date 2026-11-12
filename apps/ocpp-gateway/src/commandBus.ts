@@ -11,6 +11,7 @@ import {
 } from './db/commands.js';
 import { findConnectionOwner } from './db/logs.js';
 import { mergeConfigurationSnapshot } from './db/chargePoints.js';
+import { configurationSnapshot } from './ocpp/v16/configuration.js';
 import type { GatewayConfig } from './config.js';
 import type { Logger } from './logger.js';
 import type { ChargerConnection, ConnectionRegistry } from './registry.js';
@@ -82,6 +83,13 @@ export class CommandBus {
 
   private async dispatch(command: RemoteCommandRow): Promise<void> {
     const log = this.logger.child({ commandId: command.id, action: command.action });
+    // Only a queued command is ours to act on. The notify trigger fires on
+    // every insert, so a row inserted already settled (imported history, demo
+    // data) must not be re-run — or overwritten as "not connected" below.
+    if (command.status !== 'queued') {
+      log.debug({ status: command.status }, 'ignoring a command that is not queued');
+      return;
+    }
     // `charge_point_connections` — not local memory — decides who owns this
     // charger. Every instance receives every notification, and an instance
     // holding a stale entry would otherwise claim a command it cannot deliver,
@@ -167,20 +175,14 @@ export class CommandBus {
     outcome: 'accepted' | 'rejected',
   ): Promise<void> {
     if (action === 'GetConfiguration') {
-      const conf = response as {
-        configurationKey?: { key: string; value?: string; readonly?: boolean }[];
-      };
-      const entries = conf?.configurationKey ?? [];
-      if (entries.length === 0) return;
-      const snapshot: Record<string, unknown> = {};
-      for (const entry of entries) {
-        snapshot[entry.key] = ocpp16.isSecretConfigKey(entry.key) ? '[redacted]' : entry.value;
-      }
+      const snapshot = configurationSnapshot(response);
+      if (snapshot.reportedKeys.length === 0) return;
       const req = request as { key?: string[] };
       // A targeted GetConfiguration only answers for the keys asked; merge
       // rather than replace so the rest of the snapshot survives.
-      await mergeConfigurationSnapshot(this.db, command.charge_point_id, snapshot, {
+      await mergeConfigurationSnapshot(this.db, command.charge_point_id, snapshot.values, {
         replace: !req.key || req.key.length === 0,
+        readonlyKeys: snapshot.readonlyKeys,
       });
       return;
     }

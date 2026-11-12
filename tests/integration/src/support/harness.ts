@@ -169,6 +169,7 @@ export async function resetChargerState(): Promise<void> {
     update public.charge_points
     set connection_state = 'never_connected', last_seen_at = null, last_boot_at = null,
         vendor_reported = null, model_reported = null, firmware_version = null, config = '{}'::jsonb,
+        config_readonly = null,
         security_profile = 2
   `;
   await sql`update public.connectors set status = 'Unknown', status_updated_at = null, last_error_code = null`;
