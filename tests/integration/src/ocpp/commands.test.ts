@@ -113,6 +113,24 @@ describe('remote command dispatch', () => {
     expect(settled.error).toMatch(/not connected/i);
   });
 
+  it('leaves a command inserted already settled alone, even for an offline charger', async () => {
+    // The notify trigger fires on every insert, settled rows included.
+    const [settledRow] = await sql<{ id: string }[]>`
+      insert into public.remote_commands (tenant_id, charge_point_id, action, payload, status, response)
+      values (${FIXTURES.tenantA}, ${FIXTURES.chargePointA}, 'ClearCache', '{}', 'accepted',
+              '{"status": "Accepted"}')
+      returning id
+    `;
+    // A queued command behind it settles once the gateway has handled both.
+    await commandStatus(await queueCommand('ClearCache', {}));
+
+    const [row] = await sql`
+      select status, error from public.remote_commands where id = ${settledRow.id}
+    `;
+    expect(row.status).toBe('accepted');
+    expect(row.error).toBeNull();
+  });
+
   it('rejects a malformed payload before it reaches the charger', async () => {
     let called = false;
     const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
@@ -165,6 +183,7 @@ describe('configuration snapshot via the bus', () => {
         GetConfiguration: () => ({
           configurationKey: [
             { key: 'HeartbeatInterval', readonly: false, value: '120' },
+            { key: 'NumberOfConnectors', readonly: true, value: '2' },
             { key: 'AuthorizationKey', readonly: false, value: 'super-secret' },
           ],
           unknownKey: [],
@@ -176,12 +195,51 @@ describe('configuration snapshot via the bus', () => {
     const settled = await commandStatus(await queueCommand('GetConfiguration', {}));
     expect(settled.status).toBe('accepted');
 
-    const [cp] = await sql<{ config: Record<string, unknown> }[]>`
-      select config from public.charge_points where id = ${FIXTURES.chargePointA}
+    const [cp] = await sql<{ config: Record<string, unknown>; config_readonly: string[] }[]>`
+      select config, config_readonly from public.charge_points where id = ${FIXTURES.chargePointA}
     `;
     expect(cp.config.HeartbeatInterval).toBe('120');
     expect(cp.config.AuthorizationKey).toBe('[redacted]');
     expect(JSON.stringify(cp.config)).not.toContain('super-secret');
+    // The readonly flag survives, so the admin can refuse to offer Edit.
+    expect(cp.config_readonly).toEqual(['NumberOfConnectors']);
+
+    await charger.close();
+  });
+
+  it('re-flags only the keys a targeted GetConfiguration answered for', async () => {
+    await sql`
+      update public.charge_points
+      set config = '{"HeartbeatInterval": "300", "NumberOfConnectors": "2", "VendorMode": "A"}'::jsonb,
+          config_readonly = '{NumberOfConnectors,VendorMode}'
+      where id = ${FIXTURES.chargePointA}
+    `;
+    const charger = await connectCharger(gw.port, FIXTURES.identityA, FIXTURES.keyA, {
+      handlers: {
+        // The vendor unlocked VendorMode in a firmware update. Only the
+        // targeted read answers: the gateway's own full read after boot must
+        // not race this scenario's assertions.
+        GetConfiguration: (params) => {
+          if (!(params as { key?: string[] })?.key?.length) throw new Error('not in this script');
+          return {
+            configurationKey: [{ key: 'VendorMode', readonly: false, value: 'B' }],
+            unknownKey: [],
+          };
+        },
+      },
+    });
+    await charger.call('BootNotification', BOOT);
+
+    await commandStatus(await queueCommand('GetConfiguration', { key: ['VendorMode'] }));
+    const [cp] = await sql<{ config: Record<string, unknown>; config_readonly: string[] }[]>`
+      select config, config_readonly from public.charge_points where id = ${FIXTURES.chargePointA}
+    `;
+    expect(cp.config).toEqual({
+      HeartbeatInterval: '300',
+      NumberOfConnectors: '2',
+      VendorMode: 'B',
+    });
+    expect(cp.config_readonly).toEqual(['NumberOfConnectors']);
 
     await charger.close();
   });

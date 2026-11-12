@@ -112,32 +112,57 @@ export async function markOffline(db: Db, chargePointId: string): Promise<void> 
   `;
 }
 
+/**
+ * Replaces the stored snapshot wholesale. `readonlyKeys` is what the charger
+ * flagged readonly; omit it (ChangeConfiguration carries no such flag) to
+ * leave the stored list as it is.
+ */
 export async function saveConfigurationSnapshot(
   db: Db,
   chargePointId: string,
   config: Record<string, unknown>,
+  readonlyKeys?: string[],
 ): Promise<void> {
   await db`
     update public.charge_points
-    set config = ${db.json(config as never)}
+    set config = ${db.json(config as never)},
+        config_readonly = ${
+          readonlyKeys
+            ? db`array(select k from jsonb_array_elements_text(${db.json(readonlyKeys as never)}) k order by k)`
+            : db`config_readonly`
+        }
     where id = ${chargePointId}
   `;
 }
 
-/** Merges keys into the stored snapshot, or replaces it wholesale. */
+/**
+ * Merges keys into the stored snapshot, or replaces it wholesale. For a merge
+ * with readonly information, the keys answered for are re-flagged from the
+ * answer; keys not in it keep their stored flag.
+ */
 export async function mergeConfigurationSnapshot(
   db: Db,
   chargePointId: string,
   config: Record<string, unknown>,
-  options: { replace: boolean },
+  options: { replace: boolean; readonlyKeys?: string[] },
 ): Promise<void> {
   if (options.replace) {
-    await saveConfigurationSnapshot(db, chargePointId, config);
+    await saveConfigurationSnapshot(db, chargePointId, config, options.readonlyKeys);
     return;
   }
+  const readonly = options.readonlyKeys
+    ? db`array(
+        select k from unnest(coalesce(config_readonly, '{}'::text[])) k
+        where k not in (select jsonb_object_keys(${db.json(config as never)}))
+        union
+        select jsonb_array_elements_text(${db.json(options.readonlyKeys as never)})
+        order by 1
+      )`
+    : db`config_readonly`;
   await db`
     update public.charge_points
-    set config = config || ${db.json(config as never)}
+    set config = config || ${db.json(config as never)},
+        config_readonly = ${readonly}
     where id = ${chargePointId}
   `;
 }
