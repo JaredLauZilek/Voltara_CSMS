@@ -1,6 +1,6 @@
 import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { billing, formatDateTime, formatDuration, formatKwh } from '@voltara/shared';
+import { billing, formatDateTime, formatDuration, formatGun, formatKwh } from '@voltara/shared';
 import { useReceipt, useSession, useSessionCdr } from '@/features/sessions/hooks';
 import { C } from '@/lib/theme';
 import { Body, Card, Label, Screen, Title } from '@/lib/ui';
@@ -24,9 +24,9 @@ export default function SessionDetail() {
       <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
         <Card style={{ gap: 4 }}>
           <Label>{formatDateTime(s.started_at)}</Label>
-          <Title>{s.charge_points?.locations?.name ?? s.charge_points?.name ?? 'Charger'}</Title>
+          <Title>{s.charge_points?.locations?.name ?? 'Charger'}</Title>
           <Body muted>
-            {s.charge_points?.name} · connector {s.ocpp_connector_id} · {formatDuration(dur)}
+            {formatGun(s.ocpp_connector_id)} · {formatDuration(dur)}
           </Body>
         </Card>
 

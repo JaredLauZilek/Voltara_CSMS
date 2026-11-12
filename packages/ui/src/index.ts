@@ -6,6 +6,7 @@ export { C, RADIUS, SPACE, STATUS_COLORS } from './tokens';
 export type { Attachment } from './types';
 
 export { Badge, StatusPill } from './components/Badge';
+export { ChargerIcon } from './components/ChargerIcon';
 export { KPICard } from './components/KPICard';
 export { Modal } from './components/Modal';
 export { NavItem } from './components/NavItem';

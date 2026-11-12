@@ -2,15 +2,14 @@
 import { supabase } from '@/shared/lib/supabase';
 import type { Issue, IssueInsert, IssueUpdate, IssueWithChargePoint } from './types';
 
-const SELECT = '*, charge_points(name, ocpp_identity)';
+const SELECT = '*, charge_points(ocpp_identity)';
 
 function flatten(
-  row: Issue & { charge_points?: { name: string; ocpp_identity: string } | null },
+  row: Issue & { charge_points?: { ocpp_identity: string } | null },
 ): IssueWithChargePoint {
   const { charge_points, ...issue } = row;
   return {
     ...(issue as Issue),
-    charge_point_name: charge_points?.name ?? null,
     charge_point_identity: charge_points?.ocpp_identity ?? null,
   };
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Badge, C, Modal } from '@voltara/ui';
-import { formatDateTime } from '@voltara/shared';
+import { formatDateTime, formatDuration, formatGun, formatKwh } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useIdTags } from '@/features/id-tags';
+import { useOpenSessions } from '@/features/sessions';
 import { useRemoteOps } from './hooks';
 import { COMMAND_STATUS_LABELS, REMOTE_OP_LABELS } from './types';
 import type {
@@ -225,27 +226,32 @@ function RemoteOpModal({
   onConfirm: (op: RemoteOpInput) => void;
 }) {
   const { data: idTags = [] } = useIdTags();
+  const { data: openSessions = [], isLoading: loadingSessions } = useOpenSessions(cp.id);
   const firstConnector = cp.connectors[0]?.ocpp_connector_id ?? 1;
   const [connectorId, setConnectorId] = useState<number>(firstConnector);
   const [idTag, setIdTag] = useState<string>('');
   const [transactionId, setTransactionId] = useState<string>('');
+  const [manualTransaction, setManualTransaction] = useState(false);
   const [resetType, setResetType] = useState<'Soft' | 'Hard'>('Soft');
   const [availability, setAvailability] = useState<'Operative' | 'Inoperative'>('Operative');
   const [wholeCharger, setWholeCharger] = useState(false);
   const [trigger, setTrigger] = useState('StatusNotification');
 
   const activeTags = idTags.filter((t) => t.status === 'active');
-  const chargingConnector = cp.connectors.find((c) =>
-    ['Charging', 'SuspendedEV', 'SuspendedEVSE', 'Preparing', 'Finishing'].includes(c.status),
-  );
+  // One running session is the common case: pick it for the operator.
+  const stopTransaction =
+    transactionId ||
+    (!manualTransaction && openSessions.length === 1
+      ? String(openSessions[0]!.ocpp_transaction_id)
+      : '');
 
   const build = (): RemoteOpInput | null => {
     switch (action) {
       case 'RemoteStartTransaction':
         return idTag ? { action, payload: { idTag, connectorId } } : null;
       case 'RemoteStopTransaction': {
-        const n = Number(transactionId);
-        return Number.isInteger(n) && transactionId !== ''
+        const n = Number(stopTransaction);
+        return Number.isInteger(n) && stopTransaction !== ''
           ? { action, payload: { transactionId: n } }
           : null;
       }
@@ -280,15 +286,15 @@ function RemoteOpModal({
 
   const explain: Record<RemoteCommandActionUi, string> = {
     RemoteStartTransaction:
-      'Starts charging on the chosen connector as if the tag had been presented. The car must already be plugged in.',
+      'Starts charging on the chosen gun as if the tag had been presented. The car must already be plugged in.',
     RemoteStopTransaction:
-      'Stops the running transaction. The connector goes to Finishing until the cable is removed.',
+      'Stops the running transaction. The gun goes to Finishing until the cable is removed.',
     Reset:
       'Soft restarts the charger software; Hard power-cycles it. Any running session is stopped.',
     UnlockConnector:
-      'Releases the cable lock on the chosen connector. Ends the session if one is running.',
+      'Releases the cable lock on the chosen gun. Ends the session if one is running.',
     ChangeAvailability:
-      'Inoperative takes the connector (or the whole charger) out of service until set back to Operative.',
+      'Inoperative takes the gun (or the whole charger) out of service until set back to Operative.',
     ChangeConfiguration: 'Writes one configuration key on the charger.',
     GetConfiguration: 'Asks the charger for its full configuration and stores the answer here.',
     TriggerMessage: 'Asks the charger to send a message now — useful to refresh a stale status.',
@@ -312,7 +318,7 @@ function RemoteOpModal({
             trigger !== 'BootNotification' &&
             trigger !== 'Heartbeat')) && (
           <div>
-            <label style={labelStyle}>Connector</label>
+            <label style={labelStyle}>Gun</label>
             <select
               value={connectorId}
               onChange={(e) => setConnectorId(Number(e.target.value))}
@@ -321,7 +327,7 @@ function RemoteOpModal({
             >
               {cp.connectors.map((c) => (
                 <option key={c.id} value={c.ocpp_connector_id}>
-                  Connector {c.ocpp_connector_id} · {c.status}
+                  {formatGun(c.ocpp_connector_id)} · {c.status}
                 </option>
               ))}
             </select>
@@ -349,18 +355,89 @@ function RemoteOpModal({
 
         {action === 'RemoteStopTransaction' && (
           <div style={{ gridColumn: '1/-1' }}>
-            <label style={labelStyle}>Transaction ID</label>
-            <input
-              value={transactionId}
-              onChange={(e) => setTransactionId(e.target.value.replace(/[^0-9]/g, ''))}
-              placeholder="From the running session"
-              style={{ ...inputStyle, fontFamily: 'monospace' }}
-            />
-            <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
-              {chargingConnector
-                ? `Connector ${chargingConnector.ocpp_connector_id} is ${chargingConnector.status}. The transaction ID is on the session under the Sessions tab.`
-                : 'No connector reports a running session right now.'}
-            </div>
+            <label style={labelStyle}>Session to stop</label>
+            {!manualTransaction && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {openSessions.map((s) => {
+                  const tx = String(s.ocpp_transaction_id);
+                  const selected = stopTransaction === tx;
+                  const connectorStatus = cp.connectors.find(
+                    (c) => c.ocpp_connector_id === s.ocpp_connector_id,
+                  )?.status;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setTransactionId(tx)}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: 3,
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        border: `2px solid ${selected ? C.green : C.border}`,
+                        background: selected ? C.honeydew : C.white,
+                        fontFamily: 'Figtree',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>
+                        {formatGun(s.ocpp_connector_id)}
+                        {connectorStatus ? ` · ${connectorStatus}` : ''}
+                        {s.id_tag ? ` · ${s.id_tag}` : ''}
+                      </span>
+                      <span style={{ fontSize: 12, color: C.slate }}>
+                        Started {formatDateTime(s.started_at)} ·{' '}
+                        {formatDuration(
+                          Math.max(0, (Date.now() - new Date(s.started_at).getTime()) / 1000),
+                        )}{' '}
+                        · {formatKwh(s.energy_wh)} · Txn {tx}
+                      </span>
+                    </button>
+                  );
+                })}
+                {!loadingSessions && openSessions.length === 0 && (
+                  <div style={{ fontSize: 13, color: C.slate }}>
+                    No session is running on this charger.
+                  </div>
+                )}
+              </div>
+            )}
+            {manualTransaction && (
+              <>
+                <input
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="Transaction ID"
+                  autoFocus
+                  style={{ ...inputStyle, fontFamily: 'monospace' }}
+                />
+                <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
+                  For a transaction the charger reports but this system has no session for — for
+                  example one started while the charger was offline.
+                </div>
+              </>
+            )}
+            <button
+              onClick={() => {
+                setManualTransaction((m) => !m);
+                setTransactionId('');
+              }}
+              style={{
+                marginTop: 8,
+                padding: 0,
+                border: 'none',
+                background: 'transparent',
+                color: C.green,
+                fontFamily: 'Figtree',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {manualTransaction ? '‹ Pick a running session' : 'Enter a transaction ID instead ›'}
+            </button>
           </div>
         )}
 
@@ -407,7 +484,7 @@ function RemoteOpModal({
                 onChange={(e) => setWholeCharger(e.target.checked)}
                 style={{ accentColor: C.green }}
               />
-              Apply to the whole charger (all connectors)
+              Apply to the whole charger (all guns)
             </label>
           </>
         )}

@@ -4,7 +4,6 @@ import type { Database } from '@voltara/shared/database.types';
 
 export type DriverSession = Database['public']['Tables']['charging_sessions']['Row'] & {
   charge_points: {
-    name: string;
     ocpp_identity: string;
     locations: { id: string; name: string } | null;
   } | null;
@@ -15,7 +14,7 @@ export type DriverReceipt = Pick<
   'id' | 'number' | 'total_sen' | 'issued_at' | 'lines' | 'seller' | 'tax_sen' | 'subtotal_sen'
 >;
 
-const SELECT = '*, charge_points(name, ocpp_identity, locations(id, name))';
+const SELECT = '*, charge_points(ocpp_identity, locations(id, name))';
 
 export async function listSessions(): Promise<DriverSession[]> {
   const { data, error } = await supabase

@@ -9,7 +9,7 @@ export interface ActivityRow {
   error_code: string | null;
   info: string | null;
   recorded_at: string;
-  charge_points: { name: string; ocpp_identity: string } | null;
+  charge_points: { ocpp_identity: string } | null;
 }
 
 /** The latest connector status changes across the tenant — the "what just happened" feed. */
@@ -17,7 +17,7 @@ export async function listRecentActivity(limit = 25): Promise<ActivityRow[]> {
   const { data, error } = await supabase
     .from('charge_point_status_log')
     .select(
-      'id, charge_point_id, ocpp_connector_id, status, error_code, info, recorded_at, charge_points(name, ocpp_identity)',
+      'id, charge_point_id, ocpp_connector_id, status, error_code, info, recorded_at, charge_points(ocpp_identity)',
     )
     .order('id', { ascending: false })
     .limit(limit);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
+import { formatGun } from '@voltara/shared';
 import { useChargePoints } from '@/features/charge-points';
 import { useDriverGroups } from '@/features/driver-groups';
 import { useLocations } from '@/features/locations';
@@ -133,7 +134,8 @@ export function AssignmentModal({ tariffId, onClose }: { tariffId: string; onClo
               <option value="">— Choose a charger —</option>
               {chargePoints.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} · {c.ocpp_identity}
+                  {c.ocpp_identity}
+                  {c.location_name ? ` · ${c.location_name}` : ''}
                 </option>
               ))}
             </select>
@@ -141,7 +143,7 @@ export function AssignmentModal({ tariffId, onClose }: { tariffId: string; onClo
         )}
         {scope === 'connector' && (
           <div>
-            <label style={labelStyle}>Connector</label>
+            <label style={labelStyle}>Gun</label>
             <select
               value={connectorId}
               onChange={(e) => setConnectorId(e.target.value)}
@@ -151,7 +153,7 @@ export function AssignmentModal({ tariffId, onClose }: { tariffId: string; onClo
               <option value="">— Choose —</option>
               {cp?.connectors.map((k) => (
                 <option key={k.id} value={k.id}>
-                  Connector {k.ocpp_connector_id} · {k.connector_type}
+                  {formatGun(k.ocpp_connector_id)} · {k.connector_type}
                 </option>
               ))}
             </select>

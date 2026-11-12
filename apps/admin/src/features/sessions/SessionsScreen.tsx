@@ -52,7 +52,7 @@ export function SessionsScreen() {
         !(
           (s.id_tag ?? '').toLowerCase().includes(q) ||
           String(s.ocpp_transaction_id).includes(q) ||
-          (s.charge_point_name ?? '').toLowerCase().includes(q)
+          (s.charge_point_identity ?? '').toLowerCase().includes(q)
         )
       )
         return false;
@@ -91,7 +91,7 @@ export function SessionsScreen() {
               <option value="">All chargers</option>
               {chargePoints.map((cp) => (
                 <option key={cp.id} value={cp.id}>
-                  {cp.name}
+                  {cp.ocpp_identity}
                 </option>
               ))}
             </select>

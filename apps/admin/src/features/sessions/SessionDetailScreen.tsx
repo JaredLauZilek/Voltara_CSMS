@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, C, LineChart } from '@voltara/ui';
 import { billing } from '@voltara/shared';
-import { formatDateTime, formatDuration, formatKw, formatKwh } from '@voltara/shared';
+import { formatDateTime, formatDuration, formatGun, formatKw, formatKwh } from '@voltara/shared';
 import { useSessionCdr } from '@/features/cdrs';
 import { useSessionDetail, useSessionMinutes } from './hooks';
 import { OPEN_STATUSES, SESSION_BADGE, SESSION_STATUS_LABELS } from './types';
@@ -33,6 +34,9 @@ export function SessionDetailScreen() {
   const open = session ? OPEN_STATUSES.includes(session.status) : false;
   const { data: minutes = [] } = useSessionMinutes(id, open);
   const { data: cdr } = useSessionCdr(id);
+  // One hover position for both charts: they share the time axis, so their
+  // crosshairs move together and each header reads out its own value.
+  const [hover, setHover] = useState<number | null>(null);
 
   if (isLoading) return null;
   if (!session) {
@@ -52,12 +56,12 @@ export function SessionDetailScreen() {
   const energySeries = minutes.map((m) =>
     Math.max(0, Number(m.energy_wh ?? 0) - Number(session.meter_start_wh ?? 0)),
   );
-  const labelEvery = Math.max(1, Math.ceil(minutes.length / 8));
-  const labels = minutes.map((m, i) =>
-    i % labelEvery === 0
-      ? new Date(m.minute).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-      : '',
+  // Every minute gets a label; the chart shows as many as fit its width.
+  const labels = minutes.map((m) =>
+    new Date(m.minute).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
   );
+  const at = hover !== null && hover < minutes.length ? hover : null;
+  const tick = (v: number) => String(Number((v / 1000).toFixed(1)));
   const peakW = powerSeries.length
     ? Math.max(...minutes.map((m) => Number(m.max_power_w ?? 0)))
     : null;
@@ -92,19 +96,30 @@ export function SessionDetailScreen() {
                 to={`/charge-points/${session.charge_point_id}`}
                 style={{ color: C.green, fontWeight: 600, textDecoration: 'none' }}
               >
-                {session.charge_point_name ?? session.charge_point_identity}
+                {session.charge_point_identity}
               </Link>
             ) : (
               '—'
             )}
-            {' · connector '}
-            {session.ocpp_connector_id}
+            {' · '}
+            {formatGun(session.ocpp_connector_id)}
             {session.id_tag ? (
               <>
                 {' '}
                 · <span style={{ fontFamily: 'monospace' }}>{session.id_tag}</span>
               </>
             ) : null}
+            {session.charge_point_id && (
+              <>
+                {' · '}
+                <Link
+                  to={`/charge-points/${session.charge_point_id}?tab=logs&session=${session.id}`}
+                  style={{ color: C.green, fontWeight: 600, textDecoration: 'none' }}
+                >
+                  OCPP log for this session ›
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -176,7 +191,14 @@ export function SessionDetailScreen() {
       </div>
 
       <div style={card}>
-        <div style={sectionTitle}>Power · kW</div>
+        <ChartHeader
+          title="Power · kW"
+          value={
+            at !== null ? formatKw(powerSeries[at]) : open ? formatKw(livePower) : formatKw(peakW)
+          }
+          caption={at !== null ? labels[at]! : open ? 'now' : 'peak'}
+          show={powerSeries.length > 0}
+        />
         {powerSeries.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: C.slate, fontSize: 13 }}>
             {open
@@ -187,15 +209,25 @@ export function SessionDetailScreen() {
           <LineChart
             data={powerSeries}
             labels={labels}
-            formatValue={(v) => (v / 1000).toFixed(1)}
+            formatValue={tick}
             showPoints={powerSeries.length <= 30}
-            gradientId="power"
+            activeIndex={at}
+            onHover={setHover}
+            ariaLabel="Power over the session, in kilowatts"
           />
         )}
       </div>
 
       <div style={card}>
-        <div style={sectionTitle}>Energy delivered · kWh</div>
+        <ChartHeader
+          title="Energy delivered · kWh"
+          value={formatKwh(
+            at !== null ? energySeries[at] : energySeries[energySeries.length - 1],
+            2,
+          )}
+          caption={at !== null ? labels[at]! : open ? 'so far' : 'total'}
+          show={energySeries.length > 0}
+        />
         {energySeries.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', color: C.slate, fontSize: 13 }}>
             No readings.
@@ -205,9 +237,11 @@ export function SessionDetailScreen() {
             data={energySeries}
             labels={labels}
             color={C.opal}
-            formatValue={(v) => (v / 1000).toFixed(1)}
+            formatValue={tick}
             showPoints={energySeries.length <= 30}
-            gradientId="energy"
+            activeIndex={at}
+            onHover={setHover}
+            ariaLabel="Energy delivered over the session, in kilowatt-hours"
           />
         )}
       </div>
@@ -302,6 +336,39 @@ function Meta({ label, value }: { label: string; value: string }) {
         {label}
       </div>
       <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
+
+/** Card header for a chart: the title, and a readout of the hovered (or headline) value. */
+function ChartHeader({
+  title,
+  value,
+  caption,
+  show,
+}: {
+  title: string;
+  value: string;
+  caption: string;
+  show: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+      <span style={sectionTitle}>{title}</span>
+      {show && (
+        <span
+          style={{
+            marginLeft: 'auto',
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 6,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{value}</span>
+          <span style={{ fontSize: 12, color: C.slate }}>{caption}</span>
+        </span>
+      )}
     </div>
   );
 }

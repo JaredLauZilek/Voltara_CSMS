@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { C, Modal } from '@voltara/ui';
-import { formatDateTime } from '@voltara/shared';
+import { formatDateTime, formatGun } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useChargePoints } from '@/features/charge-points';
 import { useCreateIssue, useDeleteIssue, useUpdateIssue } from './hooks';
@@ -162,14 +162,15 @@ export function IssueModal({
             <option value="">— Not charger-specific —</option>
             {chargePoints.map((cp) => (
               <option key={cp.id} value={cp.id}>
-                {cp.name} · {cp.ocpp_identity}
+                {cp.ocpp_identity}
+                {cp.location_name ? ` · ${cp.location_name}` : ''}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label style={labelStyle}>Connector</label>
+          <label style={labelStyle}>Gun</label>
           <select
             value={form.ocpp_connector_id ?? ''}
             onChange={(e) =>
@@ -184,7 +185,7 @@ export function IssueModal({
             <option value="">— Whole charger —</option>
             {selectedCp?.connectors.map((c) => (
               <option key={c.id} value={c.ocpp_connector_id}>
-                Connector {c.ocpp_connector_id}
+                {formatGun(c.ocpp_connector_id)}
               </option>
             ))}
           </select>

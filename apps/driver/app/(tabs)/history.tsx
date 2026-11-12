@@ -39,7 +39,7 @@ export default function History() {
                   style={{ fontSize: 15, fontWeight: '700', color: C.ink, flex: 1 }}
                   numberOfLines={1}
                 >
-                  {s.charge_points?.locations?.name ?? s.charge_points?.name ?? 'Charger'}
+                  {s.charge_points?.locations?.name ?? 'Charger'}
                 </Text>
                 <Text
                   style={{

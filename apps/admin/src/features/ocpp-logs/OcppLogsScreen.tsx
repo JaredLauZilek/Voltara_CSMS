@@ -73,7 +73,8 @@ export function OcppLogsScreen() {
               <option value="">All chargers</option>
               {chargePoints.map((cp) => (
                 <option key={cp.id} value={cp.id}>
-                  {cp.name} · {cp.ocpp_identity}
+                  {cp.ocpp_identity}
+                  {cp.location_name ? ` · ${cp.location_name}` : ''}
                 </option>
               ))}
             </select>
@@ -168,7 +169,7 @@ function FrameRow({
   onToggle,
 }: {
   frame: OcppMessage;
-  charger?: { id: string; name: string; ocpp_identity: string };
+  charger?: { id: string; ocpp_identity: string };
   open: boolean;
   onToggle: () => void;
 }) {
@@ -204,7 +205,7 @@ function FrameRow({
               to={`/charge-points/${charger.id}`}
               style={{ color: C.green, fontWeight: 600, textDecoration: 'none' }}
             >
-              {charger.name}
+              {charger.ocpp_identity}
             </Link>
           ) : (
             <span style={{ color: C.slate }}>—</span>

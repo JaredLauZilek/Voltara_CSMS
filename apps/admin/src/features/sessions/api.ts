@@ -1,16 +1,16 @@
 // The ONLY place `supabase.from('charging_sessions' | 'meter_values_agg_1m')` may appear.
 import { supabase } from '@/shared/lib/supabase';
+import { OPEN_STATUSES } from './types';
 import type { ChargingSession, MeterMinute, SessionWithChargePoint } from './types';
 
-const SELECT = '*, charge_points(name, ocpp_identity)';
+const SELECT = '*, charge_points(ocpp_identity)';
 
 function flatten(
-  row: ChargingSession & { charge_points?: { name: string; ocpp_identity: string } | null },
+  row: ChargingSession & { charge_points?: { ocpp_identity: string } | null },
 ): SessionWithChargePoint {
   const { charge_points, ...s } = row;
   return {
     ...(s as ChargingSession),
-    charge_point_name: charge_points?.name ?? null,
     charge_point_identity: charge_points?.ocpp_identity ?? null,
   };
 }
@@ -51,6 +51,19 @@ export async function getSession(id: string): Promise<SessionWithChargePoint | n
     .maybeSingle();
   if (error) throw error;
   return data ? flatten(data as Parameters<typeof flatten>[0]) : null;
+}
+
+/** Sessions still open on one charger, newest first — what a remote stop can target. */
+export async function listOpenSessions(chargePointId: string): Promise<SessionWithChargePoint[]> {
+  const { data, error } = await supabase
+    .from('charging_sessions')
+    .select(SELECT)
+    .eq('charge_point_id', chargePointId)
+    .is('ended_at', null)
+    .in('status', OPEN_STATUSES)
+    .order('started_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((r) => flatten(r as Parameters<typeof flatten>[0]));
 }
 
 /** Per-minute rollup for the chart — never the raw meter_values table. */

@@ -1,7 +1,14 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Badge, C, KPICard, Pagination, Toolbar, usePagination } from '@voltara/ui';
-import { billing, formatDateTime, formatDuration, formatKwh } from '@voltara/shared';
+import {
+  billing,
+  formatDateTime,
+  formatDuration,
+  formatGun,
+  formatKwh,
+  gunLetter,
+} from '@voltara/shared';
 import { useBillingAccounts } from '@/features/billing-accounts';
 import { useChargePoints } from '@/features/charge-points';
 import { useLocations } from '@/features/locations';
@@ -73,8 +80,11 @@ export function CdrsScreen() {
         { header: 'Started', value: (c) => formatDateTime(c.start_at) },
         { header: 'Ended', value: (c) => formatDateTime(c.end_at) },
         { header: 'Site', value: (c) => c.location_name },
-        { header: 'Charger', value: (c) => c.charge_point_name ?? c.ocpp_identity },
-        { header: 'Connector', value: (c) => c.ocpp_connector_id },
+        { header: 'Charger', value: (c) => c.ocpp_identity },
+        {
+          header: 'Gun',
+          value: (c) => (c.ocpp_connector_id ? gunLetter(c.ocpp_connector_id) : ''),
+        },
         { header: 'ID tag', value: (c) => c.id_tag },
         { header: 'Billing account', value: (c) => c.account_name ?? 'ad-hoc' },
         { header: 'Driver group', value: (c) => c.group_name },
@@ -175,7 +185,7 @@ export function CdrsScreen() {
               <option value="">All chargers</option>
               {chargePoints.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {c.ocpp_identity}
                 </option>
               ))}
             </select>
@@ -266,12 +276,10 @@ function Row({ c, onClick }: { c: CdrWithNames; onClick: () => void }) {
         {formatDateTime(c.start_at)}
       </td>
       <td style={{ padding: '12px 16px' }}>
-        <div style={{ fontWeight: 600, color: C.ink }}>
-          {c.charge_point_name ?? c.ocpp_identity ?? '—'}
-        </div>
+        <div style={{ fontWeight: 600, color: C.ink }}>{c.ocpp_identity ?? '—'}</div>
         <div style={{ fontSize: 12, color: C.slate }}>
           {c.location_name ?? ''}
-          {c.ocpp_connector_id ? ` · connector ${c.ocpp_connector_id}` : ''}
+          {c.ocpp_connector_id ? ` · ${formatGun(c.ocpp_connector_id)}` : ''}
         </div>
       </td>
       <td style={{ padding: '12px 16px', color: C.ink }}>

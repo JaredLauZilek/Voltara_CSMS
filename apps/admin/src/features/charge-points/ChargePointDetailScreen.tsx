@@ -1,26 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Badge, C } from '@voltara/ui';
-import { formatDateTime } from '@voltara/shared';
+import { Badge, C, ChargerIcon } from '@voltara/ui';
+import { formatDateTime, formatGun } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { IssueModal, useChargePointIssues } from '@/features/issues';
 import { ChargePointSessions } from '@/features/sessions';
 import {
   useChargePointDetail,
-  useConnectionEvents,
   useDeleteChargePoint,
-  useRecentFrames,
-  useStatusEvents,
   useUpdateChargePoint,
   useUptime,
 } from './hooks';
+import { ChargerActivity } from './ChargerActivity';
 import { ConnectorTile } from './ConnectorTile';
 import { ChargePointModal } from './ChargePointModal';
 import { ConfigViewer } from './ConfigViewer';
 import { RemoteOpsPanel } from './RemoteOpsPanel';
 import { DETAIL_TABS, DETAIL_TAB_LABELS, displayStatus, gatewayDisplayHost } from './types';
 import type { DetailTab } from './types';
-import type { OcppFrame } from './api';
 
 const GATEWAY_URL =
   (import.meta.env.VITE_GATEWAY_URL as string | undefined) ??
@@ -103,6 +100,12 @@ export function ChargePointDetailScreen() {
   const canOperate = tenantRole !== 'viewer';
   const up = uptime.find((u) => u.charge_point_id === cp.id);
   const activeIssues = openIssues.filter((i) => i.status === 'open' || i.status === 'in_progress');
+  // What was registered vs what the unit says at boot: a mismatch means the
+  // charger using this ID may not be the one that was registered.
+  const serialMismatch =
+    !!cp.registered_serial &&
+    !!cp.serial_number &&
+    cp.registered_serial.trim().toLowerCase() !== cp.serial_number.trim().toLowerCase();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -126,19 +129,17 @@ export function ChargePointDetailScreen() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 22,
-            color: C.green,
             flexShrink: 0,
           }}
         >
-          ⚡
+          <ChargerIcon frame="none" height={30} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span
               style={{ fontSize: 18, fontWeight: 700, color: C.green, letterSpacing: '-0.02em' }}
             >
-              {cp.name}
+              {cp.ocpp_identity}
             </span>
             <Badge status={connectionBadge} />
             {cp.lifecycle === 'pending' && <Badge status="Pending" />}
@@ -156,6 +157,21 @@ export function ChargePointDetailScreen() {
                 {openMode ? 'open · no auth' : 'ws:// allowed'}
               </span>
             )}
+            {serialMismatch && (
+              <span
+                title={`Registered as ${cp.registered_serial}; the charger reports ${cp.serial_number}. The unit using this ID may not be the one registered.`}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '3px 10px',
+                  borderRadius: 99,
+                  background: C.warningBg,
+                  color: C.warning,
+                }}
+              >
+                serial mismatch
+              </span>
+            )}
             {activeIssues.length > 0 && (
               <button
                 onClick={() => setTab('overview')}
@@ -165,10 +181,19 @@ export function ChargePointDetailScreen() {
               </button>
             )}
           </div>
-          <div style={{ fontSize: 12, color: C.slate, marginTop: 4, fontFamily: 'monospace' }}>
-            {cp.ocpp_identity}
+          <div style={{ fontSize: 12, color: C.slate, marginTop: 4 }}>
+            {cp.registered_serial ? (
+              <>
+                SN <span style={{ fontFamily: 'monospace' }}>{cp.registered_serial}</span>
+              </>
+            ) : (
+              'No serial recorded'
+            )}
             {cp.location_name ? (
               <span style={{ fontFamily: 'Figtree' }}> · {cp.location_name}</span>
+            ) : null}
+            {cp.model_label ? (
+              <span style={{ fontFamily: 'Figtree' }}> · {cp.model_label}</span>
             ) : null}
             {up?.uptime_pct != null && (
               <span style={{ fontFamily: 'Figtree' }}>
@@ -219,7 +244,7 @@ export function ChargePointDetailScreen() {
         <>
           {/* Connectors + remote operations */}
           <div style={card}>
-            <div style={sectionTitle}>Connectors</div>
+            <div style={sectionTitle}>Guns</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
               {cp.connectors.map((connector) => (
                 <ConnectorTile
@@ -230,7 +255,7 @@ export function ChargePointDetailScreen() {
                 />
               ))}
               {cp.connectors.length === 0 && (
-                <span style={{ fontSize: 13, color: C.slate }}>No connectors reported.</span>
+                <span style={{ fontSize: 13, color: C.slate }}>No guns reported yet.</span>
               )}
             </div>
             {canOperate && (
@@ -336,7 +361,7 @@ export function ChargePointDetailScreen() {
                 >
                   <span style={{ fontWeight: 600 }}>{i.title}</span>
                   {i.ocpp_connector_id ? (
-                    <span style={{ color: C.slate }}>connector {i.ocpp_connector_id}</span>
+                    <span style={{ color: C.slate }}>{formatGun(i.ocpp_connector_id)}</span>
                   ) : null}
                   <span style={{ marginLeft: 'auto', color: C.slate, fontSize: 12 }}>
                     {formatDateTime(i.created_at)}
@@ -352,14 +377,14 @@ export function ChargePointDetailScreen() {
 
       {tab === 'config' && <ConfigViewer cp={cp} />}
 
-      {tab === 'logs' && <LogsTab chargePointId={cp.id} />}
+      {tab === 'logs' && <ChargerActivity chargePointId={cp.id} />}
 
       {showEdit && (
         <ChargePointModal
           chargePoint={cp}
           onClose={() => setShowEdit(false)}
-          onSave={(patch) =>
-            updateMut.mutate({ id: cp.id, patch }, { onSuccess: () => setShowEdit(false) })
+          onSave={(patch, lots) =>
+            updateMut.mutate({ id: cp.id, patch, lots }, { onSuccess: () => setShowEdit(false) })
           }
           onDelete={() => deleteMut.mutate(cp.id, { onSuccess: () => navigate('/charge-points') })}
           isSaving={updateMut.isPending}
@@ -385,176 +410,6 @@ const secondaryButton: React.CSSProperties = {
   fontWeight: 700,
   cursor: 'pointer',
 };
-
-/** Connection history, status history, and the raw frame log for one charger. */
-function LogsTab({ chargePointId }: { chargePointId: string }) {
-  const { data: events = [] } = useConnectionEvents(chargePointId);
-  const { data: statuses = [] } = useStatusEvents(chargePointId);
-  const { data: frames = [] } = useRecentFrames(chargePointId);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}
-      >
-        {/* Connection history — the commissioning debug view */}
-        <div style={{ ...card, padding: 0, gap: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={sectionTitle}>Connection history</div>
-          </div>
-          {events.length === 0 ? (
-            <div
-              style={{
-                padding: 32,
-                textAlign: 'center',
-                color: C.slate,
-                fontSize: 13,
-                lineHeight: 1.6,
-              }}
-            >
-              No connection attempts recorded. The charger has not reached the platform yet — check
-              its network, the server URL (including the port), and that its ID matches exactly.
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <tbody>
-                {events.map((e) => (
-                  <tr key={e.id} style={{ borderBottom: `1px solid ${C.divider}` }}>
-                    <td
-                      style={{
-                        padding: '10px 24px',
-                        color: C.slate,
-                        whiteSpace: 'nowrap',
-                        width: 170,
-                      }}
-                    >
-                      {formatDateTime(e.recorded_at)}
-                    </td>
-                    <td style={{ padding: '10px 12px', width: 110 }}>
-                      <Badge
-                        status={
-                          e.event === 'connected'
-                            ? 'Online'
-                            : e.event === 'rejected'
-                              ? 'Rejected'
-                              : 'Offline'
-                        }
-                      />
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        color: e.event === 'rejected' ? C.error : C.slate,
-                        fontSize: 12,
-                      }}
-                    >
-                      {e.event === 'rejected'
-                        ? (e.close_reason ?? 'rejected')
-                        : e.event === 'disconnected'
-                          ? [e.close_code, e.close_reason].filter(Boolean).join(' · ') ||
-                            'connection closed'
-                          : (e.remote_address ?? '')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        <div style={{ ...card, padding: 0, gap: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={sectionTitle}>Status history</div>
-          </div>
-          {statuses.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: C.slate, fontSize: 13 }}>
-              No status notifications yet.
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <tbody>
-                {statuses.map((s) => (
-                  <tr key={s.id} style={{ borderBottom: `1px solid ${C.divider}` }}>
-                    <td
-                      style={{
-                        padding: '10px 24px',
-                        color: C.slate,
-                        whiteSpace: 'nowrap',
-                        width: 170,
-                      }}
-                    >
-                      {formatDateTime(s.recorded_at)}
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        color: C.slate,
-                        whiteSpace: 'nowrap',
-                        width: 60,
-                      }}
-                    >
-                      {s.ocpp_connector_id === 0
-                        ? 'unit'
-                        : `PL ${String(s.ocpp_connector_id).padStart(2, '0')}`}
-                    </td>
-                    <td style={{ padding: '10px 12px', width: 110 }}>
-                      <Badge status={s.status} />
-                    </td>
-                    <td
-                      style={{
-                        padding: '10px 12px',
-                        color: s.error_code ? C.error : C.slate,
-                        fontSize: 12,
-                      }}
-                    >
-                      {[s.error_code, s.vendor_error_code, s.info].filter(Boolean).join(' · ')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      <div style={{ ...card, padding: 0, gap: 0, overflow: 'hidden' }}>
-        <div
-          style={{
-            padding: '16px 24px',
-            borderBottom: `1px solid ${C.border}`,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <span style={sectionTitle}>OCPP messages · last {frames.length || '—'}</span>
-          <Link
-            to={`/ocpp-logs?cp=${chargePointId}`}
-            style={{
-              marginLeft: 'auto',
-              fontSize: 12,
-              fontWeight: 600,
-              color: C.green,
-              textDecoration: 'none',
-            }}
-          >
-            Full log ›
-          </Link>
-        </div>
-        {frames.length === 0 ? (
-          <div style={{ padding: 32, textAlign: 'center', color: C.slate, fontSize: 13 }}>
-            No frames yet. Every OCPP message this charger sends or receives will appear here.
-          </div>
-        ) : (
-          <div>
-            {frames.map((f) => (
-              <FrameRow key={f.id} frame={f} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function Meta({ label, value }: { label: string; value: string | null }) {
   return (
@@ -610,75 +465,6 @@ function Setting({ label, value }: { label: string; value: string }) {
       >
         {value}
       </code>
-    </div>
-  );
-}
-
-/** One frame; click to expand the payload. */
-function FrameRow({ frame }: { frame: OcppFrame }) {
-  const [open, setOpen] = useState(false);
-  const isError = frame.message_type === 4;
-  return (
-    <div
-      style={{ borderBottom: `1px solid ${C.divider}`, cursor: 'pointer' }}
-      onClick={() => setOpen((v) => !v)}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '9px 24px',
-          fontSize: 12,
-        }}
-      >
-        <span style={{ color: C.slate, whiteSpace: 'nowrap', width: 160, flexShrink: 0 }}>
-          {formatDateTime(frame.recorded_at)}
-        </span>
-        <span
-          style={{
-            fontWeight: 700,
-            color: frame.direction === 'in' ? C.info : C.green,
-            width: 34,
-            flexShrink: 0,
-          }}
-        >
-          {frame.direction === 'in' ? '→ in' : '← out'}
-        </span>
-        <span style={{ fontWeight: 600, color: isError ? C.error : C.ink }}>
-          {frame.action ?? (isError ? 'Error' : '—')}
-          {isError && frame.error_code ? ` · ${frame.error_code}` : ''}
-        </span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            color: C.slate,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            maxWidth: 360,
-            fontFamily: 'monospace',
-            fontSize: 11,
-          }}
-        >
-          {open ? '' : JSON.stringify(frame.payload ?? {})}
-        </span>
-      </div>
-      {open && (
-        <pre
-          style={{
-            margin: 0,
-            padding: '4px 24px 14px 230px',
-            fontSize: 11,
-            fontFamily: 'monospace',
-            color: C.ink,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
-          }}
-        >
-          {JSON.stringify(frame.payload ?? {}, null, 2)}
-        </pre>
-      )}
     </div>
   );
 }

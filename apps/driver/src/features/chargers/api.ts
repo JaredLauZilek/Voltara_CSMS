@@ -6,6 +6,8 @@ export interface ConnectorInfo {
   ocpp_connector_id: number;
   type: string;
   max_kw: number | null;
+  /** The car park lot this gun serves — what a driver looks for on site. */
+  parking_lot: string | null;
   status: string;
 }
 
@@ -21,6 +23,7 @@ export interface NearbyCharger {
   lng: number | null;
   distance_km: number | null;
   charge_point_id: string;
+  /** The charge point ID (chargers have no names); drivers are shown lots instead. */
   charge_point_name: string;
   connection_state: string;
   connectors: ConnectorInfo[];

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
-import { useLocations } from '@/features/locations';
+import { GunRows, ModelPicker, SitePicker } from './ChargerFields';
 import { SECURITY_PROFILES } from './types';
-import type { ChargePointUpdate, ChargePointWithConnectors } from './types';
+import type { ChargePointUpdate, ChargePointWithConnectors, GunInput } from './types';
 
 interface Props {
   chargePoint: ChargePointWithConnectors;
   onClose: () => void;
-  onSave: (patch: ChargePointUpdate) => void;
+  /** `lots` lists only the guns whose car park lot changed. */
+  onSave: (patch: ChargePointUpdate, lots: { id: string; parking_lot: string | null }[]) => void;
   onDelete: () => void;
   isSaving?: boolean;
   saveError?: string | null;
@@ -43,48 +44,78 @@ export function ChargePointModal({
   isSaving,
   saveError,
 }: Props) {
-  const { data: locations = [] } = useLocations();
-  const [name, setName] = useState(chargePoint.name);
+  const [serial, setSerial] = useState(chargePoint.registered_serial ?? '');
   const [locationId, setLocationId] = useState(chargePoint.location_id ?? '');
   const [securityProfile, setSecurityProfile] = useState<number>(chargePoint.security_profile);
+  const [modelId, setModelId] = useState<string | null>(chargePoint.model_id);
+  // Guns are the charger's own hardware: only their car park lots are edited.
+  const [guns, setGuns] = useState<GunInput[]>(
+    chargePoint.connectors.map((c) => ({
+      connectorType: c.connector_type,
+      parkingLot: c.parking_lot ?? '',
+    })),
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const canSave = name.trim().length > 0 && !isSaving;
+  const canSave = serial.trim().length > 0 && !isSaving;
 
   const handleSave = () => {
     if (!canSave) return;
     // Only the editable columns — never echo back server-managed runtime state
     // (PostgREST silently drops unknown keys and the update "succeeds").
-    onSave({
-      name: name.trim(),
-      location_id: locationId || null,
-      security_profile: securityProfile,
-    });
+    const lots = chargePoint.connectors
+      .map((c, i) => ({ id: c.id, parking_lot: guns[i]?.parkingLot.trim() || null }))
+      .filter((l, i) => l.parking_lot !== (chargePoint.connectors[i]?.parking_lot ?? null));
+    onSave(
+      {
+        registered_serial: serial.trim(),
+        location_id: locationId || null,
+        model_id: modelId,
+        security_profile: securityProfile,
+      },
+      lots,
+    );
   };
 
   return (
-    <Modal title={chargePoint.name} subtitle={chargePoint.ocpp_identity} onClose={onClose}>
+    <Modal
+      title={chargePoint.ocpp_identity}
+      subtitle={chargePoint.model_label ?? 'Charger'}
+      onClose={onClose}
+    >
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Charger Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+          <label style={labelStyle}>Serial number</label>
+          <input
+            value={serial}
+            onChange={(e) => setSerial(e.target.value)}
+            placeholder="As printed on the charger's label"
+            maxLength={64}
+            style={{ ...inputStyle, fontFamily: 'monospace' }}
+          />
+          {chargePoint.serial_number && (
+            <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
+              The charger reports {chargePoint.serial_number}.
+            </div>
+          )}
         </div>
 
         <div>
           <label style={labelStyle}>Site</label>
-          <select
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">— Unassigned —</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+          <SitePicker value={locationId || null} onChange={(id) => setLocationId(id ?? '')} />
         </div>
+
+        <div>
+          <label style={labelStyle}>Brand & model</label>
+          <ModelPicker value={modelId} onChange={(m) => setModelId(m?.id ?? null)} />
+        </div>
+
+        {guns.length > 0 && (
+          <div>
+            <label style={labelStyle}>Guns</label>
+            <GunRows guns={guns} onChange={setGuns} fixedTypes />
+          </div>
+        )}
 
         <div>
           <label style={labelStyle}>Connection security</label>

@@ -1,5 +1,5 @@
 // The ONLY place `supabase.from('tariffs' | 'tariff_versions' | 'tariff_assignments' | 'tax_profiles')` may appear.
-import { billing } from '@voltara/shared';
+import { billing, formatGun } from '@voltara/shared';
 import { supabase } from '@/shared/lib/supabase';
 import type {
   AssignmentWithNames,
@@ -40,7 +40,7 @@ export async function getTariff(id: string): Promise<TariffDetail | null> {
   const { data, error } = await supabase
     .from('tariffs')
     .select(
-      '*, tariff_versions(*), tariff_assignments(*, locations(name), charge_points(name, ocpp_identity), connectors(ocpp_connector_id, charge_points(name)), driver_groups(name))',
+      '*, tariff_versions(*), tariff_assignments(*, locations(name), charge_points(ocpp_identity), connectors(ocpp_connector_id, charge_points(ocpp_identity)), driver_groups(name))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -50,8 +50,11 @@ export async function getTariff(id: string): Promise<TariffDetail | null> {
     tariff_versions: TariffVersion[];
     tariff_assignments: (AssignmentWithNames & {
       locations: { name: string } | null;
-      charge_points: { name: string; ocpp_identity: string } | null;
-      connectors: { ocpp_connector_id: number; charge_points: { name: string } | null } | null;
+      charge_points: { ocpp_identity: string } | null;
+      connectors: {
+        ocpp_connector_id: number;
+        charge_points: { ocpp_identity: string } | null;
+      } | null;
       driver_groups: { name: string } | null;
     })[];
   };
@@ -62,8 +65,9 @@ export async function getTariff(id: string): Promise<TariffDetail | null> {
       .map(({ locations, charge_points, connectors, driver_groups, ...a }) => ({
         ...a,
         location_name: locations?.name ?? null,
-        charge_point_name: charge_points?.name ?? connectors?.charge_points?.name ?? null,
-        connector_label: connectors ? `Connector ${connectors.ocpp_connector_id}` : null,
+        charge_point_identity:
+          charge_points?.ocpp_identity ?? connectors?.charge_points?.ocpp_identity ?? null,
+        connector_label: connectors ? formatGun(connectors.ocpp_connector_id) : null,
         driver_group_name: driver_groups?.name ?? null,
       }))
       .sort((a, b) => (b.created_at > a.created_at ? 1 : -1)),

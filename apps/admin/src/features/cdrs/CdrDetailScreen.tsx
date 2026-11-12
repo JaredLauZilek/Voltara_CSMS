@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, C } from '@voltara/ui';
-import { billing, formatDateTime, formatDuration, formatKwh } from '@voltara/shared';
+import { billing, formatDateTime, formatDuration, formatGun, formatKwh } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useCdr, useCreateReceipt } from './hooks';
 import { UNBILLABLE_LABELS, linesOf, periodsOf, snapshotOf } from './types';
@@ -83,12 +83,12 @@ export function CdrDetailScreen() {
                 to={`/charge-points/${cdr.charge_point_id}`}
                 style={{ color: C.green, fontWeight: 600, textDecoration: 'none' }}
               >
-                {cdr.charge_point_name ?? cdr.ocpp_identity}
+                {cdr.ocpp_identity}
               </Link>
             ) : (
               cdr.ocpp_identity
             )}
-            {cdr.ocpp_connector_id ? ` · connector ${cdr.ocpp_connector_id}` : ''} ·{' '}
+            {cdr.ocpp_connector_id ? ` · ${formatGun(cdr.ocpp_connector_id)}` : ''} ·{' '}
             {cdr.location_name ?? 'no site'} · {formatDateTime(cdr.start_at)} →{' '}
             {formatDateTime(cdr.end_at)}
           </div>

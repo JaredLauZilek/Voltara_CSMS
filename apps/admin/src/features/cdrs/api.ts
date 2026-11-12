@@ -3,20 +3,17 @@ import { supabase } from '@/shared/lib/supabase';
 import type { Cdr, CdrFilters, CdrWithNames } from './types';
 
 const SELECT =
-  '*, charge_points(name), locations(name), billing_accounts(name), driver_groups(name), documents!cdrs_invoice_document_fk(number)';
+  '*, locations(name), billing_accounts(name), driver_groups(name), documents!cdrs_invoice_document_fk(number)';
 
 function flatten(row: unknown): CdrWithNames {
-  const { charge_points, locations, billing_accounts, driver_groups, documents, ...c } =
-    row as Cdr & {
-      charge_points: { name: string } | null;
-      locations: { name: string } | null;
-      billing_accounts: { name: string } | null;
-      driver_groups: { name: string } | null;
-      documents: { number: string } | null;
-    };
+  const { locations, billing_accounts, driver_groups, documents, ...c } = row as Cdr & {
+    locations: { name: string } | null;
+    billing_accounts: { name: string } | null;
+    driver_groups: { name: string } | null;
+    documents: { number: string } | null;
+  };
   return {
     ...(c as Cdr),
-    charge_point_name: charge_points?.name ?? null,
     location_name: locations?.name ?? null,
     account_name: billing_accounts?.name ?? null,
     group_name: driver_groups?.name ?? null,

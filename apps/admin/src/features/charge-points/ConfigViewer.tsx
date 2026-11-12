@@ -9,7 +9,8 @@ import type { ChargePointWithConnectors } from './types';
  * The charger's configuration as last reported (GetConfiguration snapshot).
  * "Refresh" asks the charger again through the command bus; editing a key
  * sends ChangeConfiguration. AuthorizationKey is stored redacted and cannot be
- * read back — rotation is a separate flow (CLAUDE.md §10).
+ * read back — rotation is a separate flow (CLAUDE.md §10). Keys the charger
+ * reports as readonly get no Edit: the charger would refuse every change.
  */
 export function ConfigViewer({ cp }: { cp: ChargePointWithConnectors }) {
   const { tenantRole } = useAuth();
@@ -21,6 +22,7 @@ export function ConfigViewer({ cp }: { cp: ChargePointWithConnectors }) {
   const canOperate = tenantRole !== 'viewer';
   const online = cp.connection_state === 'online';
   const config = useMemo(() => (cp.config ?? {}) as Record<string, unknown>, [cp.config]);
+  const readonlyKeys = useMemo(() => new Set(cp.config_readonly ?? []), [cp.config_readonly]);
 
   const entries = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -69,7 +71,10 @@ export function ConfigViewer({ cp }: { cp: ChargePointWithConnectors }) {
             ⌕
           </span>
         </div>
-        <span style={{ fontSize: 12, color: C.slate }}>{Object.keys(config).length} keys</span>
+        <span style={{ fontSize: 12, color: C.slate }}>
+          {Object.keys(config).length} keys
+          {readonlyKeys.size > 0 ? ` · ${readonlyKeys.size} read-only` : ''}
+        </span>
         {canOperate && (
           <button
             onClick={refresh}
@@ -136,6 +141,7 @@ export function ConfigViewer({ cp }: { cp: ChargePointWithConnectors }) {
             <tbody>
               {entries.map(([key, value]) => {
                 const secret = key.toLowerCase() === 'authorizationkey';
+                const locked = readonlyKeys.has(key);
                 const isEditing = editing === key;
                 return (
                   <tr key={key} style={{ borderBottom: `1px solid ${C.divider}` }}>
@@ -189,8 +195,23 @@ export function ConfigViewer({ cp }: { cp: ChargePointWithConnectors }) {
                         width: 160,
                       }}
                     >
+                      {locked && (
+                        <span
+                          title="The charger reports this key as read-only. It cannot be changed remotely."
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: C.slate,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
+                          Read-only
+                        </span>
+                      )}
                       {canOperate &&
                         !secret &&
+                        !locked &&
                         online &&
                         (isEditing ? (
                           <>

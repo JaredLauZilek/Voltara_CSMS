@@ -1,4 +1,5 @@
-import { C, STATUS_COLORS } from '@voltara/ui';
+import { C, ChargerIcon, STATUS_COLORS } from '@voltara/ui';
+import { formatGun } from '@voltara/shared';
 import type { Connector } from './types';
 
 /**
@@ -26,7 +27,9 @@ export function ConnectorTile({
   return (
     <button
       onClick={onClick}
-      title={`${identity} · connector ${connector.ocpp_connector_id} · ${status}`}
+      title={[identity, formatGun(connector.ocpp_connector_id), connector.parking_lot, status]
+        .filter(Boolean)
+        .join(' · ')}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -54,26 +57,21 @@ export function ConnectorTile({
         {identity}
       </span>
 
+      <ChargerIcon color={palette.color} height={40} />
+
       <span
         style={{
-          width: 40,
-          height: 52,
-          borderRadius: 8,
-          background: palette.bg,
-          border: `1.5px solid ${palette.color}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 20,
-          lineHeight: 1,
-          color: palette.color,
+          fontSize: 10,
+          fontWeight: 600,
+          color: C.slate,
+          maxWidth: 96,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}
       >
-        ⚡
-      </span>
-
-      <span style={{ fontSize: 10, fontWeight: 600, color: C.slate }}>
-        PL {String(connector.ocpp_connector_id).padStart(2, '0')}
+        {formatGun(connector.ocpp_connector_id)}
+        {connector.parking_lot ? ` · ${connector.parking_lot}` : ''}
       </span>
       <span style={{ fontSize: 10, fontWeight: 700, color: palette.color }}>{status}</span>
     </button>
