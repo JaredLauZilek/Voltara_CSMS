@@ -1,0 +1,20 @@
+{
+  "name": "@voltara/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./database.types": "./src/database.types.ts",
+    "./charger": "./src/charger/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~5.5.3",
+    "vitest": "^3.0.0"
+  }
+}

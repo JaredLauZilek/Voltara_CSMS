@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Voltara Home",
+    "slug": "voltara-home",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "voltarahome",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "my.voltara.home",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Voltara Home connects to your charger over Bluetooth to show live charging status and apply your settings.",
+        "NSCameraUsageDescription": "Voltara Home scans the QR code on your charger to add it.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "my.voltara.home",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1B512D"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#1B512D"
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      "expo-dev-client",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [
+            "central"
+          ],
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "Voltara Home connects to your charger over Bluetooth to show live charging status and apply your settings."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Voltara Home scans the QR code on your charger to add it.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}
