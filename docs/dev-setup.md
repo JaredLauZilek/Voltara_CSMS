@@ -14,7 +14,7 @@ cp apps/admin/.env.example apps/admin/.env.local
 pnpm dev               # admin on :5173, gateway health on :9221
 ```
 
-Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, platform admin) and `ops@democpo.test` / `demo-dev` (Demo CPO — the second tenant that proves isolation). Studio is disabled to keep the codespace lean — inspect data with `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres`.
+Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, platform admin) and `ops@democpo.test` / `demo-dev` (Demo CPO — the second tenant that proves isolation). Studio is disabled to keep the codespace lean — inspect data with `docker exec -it supabase_db_Voltara_CSMS psql -U postgres`.
 
 **Codespaces:** the browser runs on your machine, not in the container, so the admin app reaches
 local Supabase through the Vite dev-server proxy (`VITE_SUPABASE_URL=/supabase`) — only port 5173
@@ -30,6 +30,7 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 | `pnpm dev:phone`                             | the same, plus the Expo tunnel for testing the driver app on a phone                |
 | `pnpm dev:apps`                              | admin + gateway only, in watch mode (assumes Supabase is up)                        |
 | `pnpm db:reset`                              | re-applies all migrations + seed                                                    |
+| `pnpm db:demo-fleet`                         | loads the demo fleet (below); `pnpm dev` does this too                              |
 | `pnpm gen:types`                             | regenerates `packages/shared/src/database.types.ts` — run after **every** migration |
 | `pnpm typecheck` / `pnpm lint` / `pnpm test` | via turbo across all workspaces                                                     |
 | `pnpm test:integration`                      | RLS isolation suite (needs local stack up)                                          |
@@ -37,6 +38,31 @@ If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P 
 | `pnpm register:charger --name "…"`           | register a charge point and print its one-time credentials                          |
 | `pnpm exec supabase functions serve`         | run edge functions locally (`admin-invite`); invite emails land in Mailpit :54324   |
 | `pnpm sim:session --kwh 7.4 --idle-min 5`    | play one complete charging session through the local gateway (no hardware needed)   |
+
+### Demo fleet — chargers assumed connected
+
+Local development assumes charger connections succeed; real hardware is tested
+separately. `supabase/dev/demo-fleet.sql` adds ten already-connected Voltara
+chargers with connectors in every status (Available, Preparing, Charging,
+SuspendedEV/EVSE, Finishing, Reserved, Unavailable, Faulted, Offline). It is
+dev-only, idempotent, and not part of `seed.sql`, so after `pnpm db:reset` run
+`pnpm dev` or `pnpm db:demo-fleet` to bring it back. The gateway never touches
+these rows — their identities never connect.
+
+`supabase/dev/demo-history.sql` gives that fleet a past: a week of sessions
+with power curves, an OCPP 1.6 configuration snapshot per charger, and the
+connection/status logs and OCPP frames a day of real traffic produces (boot,
+heartbeats, transactions, meter values, remote commands, one CALLERROR). Frames
+start at each charger's last reboot and stay within the current month. It runs
+once; `pnpm db:reset` then `pnpm dev` regenerates it relative to now.
+
+`pnpm test:integration` runs against this same local database and resets every
+charger's runtime state between scenarios, demo fleet included (all chargers
+go back to never-connected, sessions and logs are deleted). Afterwards, run
+`pnpm db:reset && pnpm dev` to get the demo fleet back.
+
+The Supabase CLI does not install `psql`; use
+`docker exec -it supabase_db_Voltara_CSMS psql -U postgres` instead.
 
 ### Coming back after a pause
 
