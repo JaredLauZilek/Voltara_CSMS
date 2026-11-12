@@ -389,8 +389,8 @@ function AssignmentRow({
       : a.scope_type === 'location'
         ? `Site · ${a.location_name ?? '—'}`
         : a.scope_type === 'charge_point'
-          ? `Charger · ${a.charge_point_name ?? '—'}`
-          : `${a.charge_point_name ?? 'Charger'} · ${a.connector_label ?? 'connector'}`;
+          ? `Charger · ${a.charge_point_identity ?? '—'}`
+          : `${a.charge_point_identity ?? 'Charger'} · ${a.connector_label ?? 'gun'}`;
   return (
     <tr style={{ borderBottom: `1px solid ${C.divider}`, opacity: live ? 1 : 0.55 }}>
       <td style={{ padding: '12px 16px', fontWeight: 600, color: C.ink }}>{where}</td>

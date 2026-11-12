@@ -14,7 +14,6 @@ export type { IssueSeverity, IssueStatus } from '@voltara/shared';
 
 /** An issue with the charger it points at, for lists. */
 export interface IssueWithChargePoint extends Issue {
-  charge_point_name: string | null;
   charge_point_identity: string | null;
 }
 

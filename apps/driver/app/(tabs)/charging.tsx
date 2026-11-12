@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { billing } from '@voltara/shared';
+import { billing, formatGun } from '@voltara/shared';
 import { useStopSession } from '@/features/chargers/hooks';
 import { useActiveSession, useSessionMinutes } from '@/features/sessions/hooks';
 import { C } from '@/lib/theme';
@@ -113,12 +113,8 @@ export default function Charging() {
 
         <Card style={{ gap: 4 }}>
           <Label>Where</Label>
-          <Title>
-            {session.charge_points?.locations?.name ?? session.charge_points?.name ?? 'Charger'}
-          </Title>
-          <Body muted>
-            {session.charge_points?.name} · connector {session.ocpp_connector_id}
-          </Body>
+          <Title>{session.charge_points?.locations?.name ?? 'Charger'}</Title>
+          <Body muted>{formatGun(session.ocpp_connector_id)}</Body>
         </Card>
 
         {stop.error && <Body style={{ color: C.error }}>{(stop.error as Error).message}</Body>}

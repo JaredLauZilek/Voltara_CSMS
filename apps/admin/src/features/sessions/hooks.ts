@@ -49,6 +49,14 @@ export function useSessions(filters: SessionFilters) {
   });
 }
 
+export function useOpenSessions(chargePointId: string) {
+  useLiveSessions();
+  return useQuery({
+    queryKey: ['sessions', 'open', chargePointId],
+    queryFn: () => api.listOpenSessions(chargePointId),
+  });
+}
+
 export function useTodaySessions() {
   useLiveSessions();
   return useQuery({
@@ -58,12 +66,13 @@ export function useTodaySessions() {
   });
 }
 
-export function useSessionDetail(id: string) {
+export function useSessionDetail(id: string, enabled = true) {
   useLiveSessions();
   return useQuery({
     queryKey: ['sessions', 'detail', id],
     queryFn: async () => ({ session: await api.getSession(id), livePowerW: null as number | null }),
     refetchInterval: 30_000,
+    enabled,
   });
 }
 

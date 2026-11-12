@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Badge, C } from '@voltara/ui';
-import { formatDateTime, formatDuration, formatKwh } from '@voltara/shared';
+import { formatDateTime, formatDuration, formatKwh, formatRM, gunLetter } from '@voltara/shared';
 import { SESSION_BADGE } from './types';
 import type { SessionWithChargePoint } from './types';
 
@@ -19,11 +19,12 @@ export function SessionsTable({
   const navigate = useNavigate();
   const headers = [
     ...(showCharger ? ['Charger'] : []),
-    'Connector',
+    'Gun',
     'Status',
     'Started',
     'Duration',
     'Energy',
+    'Cost',
     'ID Tag',
     'Txn',
   ];
@@ -76,11 +77,11 @@ export function SessionsTable({
               >
                 {showCharger && (
                   <td style={{ padding: '12px 16px', fontWeight: 600, color: C.ink }}>
-                    {s.charge_point_name ?? s.charge_point_identity ?? '—'}
+                    {s.charge_point_identity ?? '—'}
                   </td>
                 )}
                 <td style={{ padding: '12px 16px', color: C.slate }}>
-                  {s.ocpp_connector_id || '—'}
+                  {s.ocpp_connector_id ? gunLetter(s.ocpp_connector_id) : '—'}
                 </td>
                 <td style={{ padding: '12px 16px' }}>
                   <Badge status={SESSION_BADGE[s.status] ?? s.status} />
@@ -103,6 +104,20 @@ export function SessionsTable({
                 </td>
                 <td style={{ padding: '12px 16px', fontWeight: 600, color: C.green }}>
                   {formatKwh(s.energy_wh)}
+                </td>
+                <td
+                  style={{ padding: '12px 16px', color: C.ink, whiteSpace: 'nowrap' }}
+                  title={
+                    s.amount_gross !== null
+                      ? s.amount_tax
+                        ? `incl. ${formatRM(Number(s.amount_tax), 2)} tax`
+                        : undefined
+                      : open
+                        ? 'Priced when the session ends'
+                        : 'Not priced — no tariff applied'
+                  }
+                >
+                  {s.amount_gross !== null ? formatRM(Number(s.amount_gross), 2) : '—'}
                 </td>
                 <td
                   style={{

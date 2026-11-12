@@ -4,7 +4,6 @@ import type { billing } from '@voltara/shared';
 export type Cdr = Database['public']['Tables']['cdrs']['Row'];
 
 export interface CdrWithNames extends Cdr {
-  charge_point_name: string | null;
   location_name: string | null;
   account_name: string | null;
   group_name: string | null;

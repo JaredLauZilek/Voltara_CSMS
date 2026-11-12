@@ -64,7 +64,9 @@ All in `packages/ui`. Do not duplicate them inside a feature; extend via props i
 | Empty state            | `padding:32; color:C.slate; fontSize:14`, centred, terse copy ("No locations found.")                                |
 | Charts                 | `Sparkline/MiniBar/Donut/LineChart/BarChart` — pure SVG, **no chart libraries ever**                                 |
 
-Icons: lucide-react in nav only (`size 18`, `strokeWidth 2.25/1.75`); Unicode glyphs elsewhere (`⌕ ▾ × ✓ ↑ ↓ ‹ › ·`). Voice: terse, sentence case, no exclamation marks, real ellipsis `…`, middot `·` as separator, en-GB dates (`25 Jul 2026`), `RM` currency via `formatRM`.
+Charts draw at their container's real pixel width — never a fixed `viewBox` stretched to fit — with clean 0-based ticks, a 2px line and hairline grid (detail: `packages/ui/CLAUDE.md`).
+
+Icons: lucide-react in nav only (`size 18`, `strokeWidth 2.25/1.75`); Unicode glyphs elsewhere (`⌕ ▾ × ✓ ↑ ↓ ‹ › ·`). Never `⚡` — it renders as a yellow colour emoji; chargers use `ChargerIcon` (hand-drawn SVG, status-coloured). Voice: terse, sentence case, no exclamation marks, real ellipsis `…`, middot `·` as separator, en-GB dates (`25 Jul 2026`), `RM` currency via `formatRM`. A connector is a **gun**, lettered on screen via `formatGun` (connectorId 1 → `Gun A`, 2 → `Gun B`; 0 → `Charger`); the number stays on the wire and in the database. Chargers have no display name: operators see the charge point ID (plus the registered serial), drivers see each gun's car park lot.
 
 ## §4 Admin app architecture (locked)
 

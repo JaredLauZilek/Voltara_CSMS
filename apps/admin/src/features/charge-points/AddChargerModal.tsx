@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { C, Modal } from '@voltara/ui';
-import { useLocations } from '@/features/locations';
 import { useChargePointWatch, useRegisterChargePoint } from './hooks';
+import { GunRows, ModelPicker, SitePicker, resizeGuns } from './ChargerFields';
 import {
-  CONNECTOR_TYPES,
   SECURITY_PROFILES,
   gatewayDisplayHost,
+  type ChargerModel,
+  type GunInput,
   type RegisteredCharger,
 } from './types';
 
@@ -35,45 +36,62 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6,
 };
 
-/** Mirrors the identity derivation in register_charge_point(). */
-function deriveIdentity(name: string): string {
-  return name
+/**
+ * Mirrors register_charge_point(): many installers set a charger's OCPP ID to
+ * its serial number, so the ID defaults to the serial.
+ */
+function deriveIdentity(serial: string): string {
+  return serial
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 40);
+    .slice(0, 48);
 }
 
 export function AddChargerModal({ onClose }: { onClose: () => void }) {
-  const { data: locations = [] } = useLocations();
   const registerMut = useRegisterChargePoint();
 
-  const [name, setName] = useState('');
+  const [serial, setSerial] = useState('');
   const [identityTouched, setIdentityTouched] = useState(false);
   const [identity, setIdentity] = useState('');
   const [locationId, setLocationId] = useState<string>('');
-  const [connectorCount, setConnectorCount] = useState(1);
-  const [connectorType, setConnectorType] = useState<string>('Type2');
+  const [modelId, setModelId] = useState<string | null>(null);
+  const [guns, setGuns] = useState<GunInput[]>([{ connectorType: 'Type2', parkingLot: '' }]);
   const [maxKw, setMaxKw] = useState('');
   const [securityProfile, setSecurityProfile] = useState<0 | 1 | 2>(2);
   const [registered, setRegistered] = useState<RegisteredCharger | null>(null);
 
-  // The identity tracks the name until the operator edits it themselves —
-  // it has to be typed into the charger by hand, so a sane default matters.
-  const effectiveIdentity = identityTouched ? identity : deriveIdentity(name);
+  // The identity tracks the serial until the operator edits it themselves —
+  // it has to match what is set on the charger, so a sane default matters.
+  const effectiveIdentity = identityTouched ? identity : deriveIdentity(serial);
+
+  // A catalogue model prefills the gun layout and power; everything stays
+  // editable, and lots already typed are kept.
+  const pickModel = (m: ChargerModel | null) => {
+    setModelId(m?.id ?? null);
+    if (!m) return;
+    const types = m.connector_types.length ? m.connector_types : ['Type2'];
+    setGuns(
+      Array.from({ length: m.connector_count }, (_, i) => ({
+        connectorType: types[Math.min(i, types.length - 1)]!,
+        parkingLot: guns[i]?.parkingLot ?? '',
+      })),
+    );
+    if (m.power_kw != null) setMaxKw(String(m.power_kw));
+  };
 
   const canSubmit =
-    name.trim().length > 0 && effectiveIdentity.length >= 3 && !registerMut.isPending;
+    serial.trim().length > 0 && effectiveIdentity.length >= 3 && !registerMut.isPending;
 
   const submit = () => {
     if (!canSubmit) return;
     registerMut.mutate(
       {
-        name: name.trim(),
+        serialNumber: serial.trim(),
         locationId: locationId || null,
         ocppIdentity: effectiveIdentity,
-        connectorCount,
-        connectorType,
+        modelId,
+        guns,
         maxKw: maxKw ? Number(maxKw) : null,
         securityProfile,
       },
@@ -85,7 +103,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
     return (
       <CredentialsStep
         charger={registered}
-        connectorCount={connectorCount}
+        gunCount={guns.length}
         securityProfile={securityProfile}
         onClose={onClose}
       />
@@ -100,12 +118,13 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
     >
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div style={{ gridColumn: '1/-1' }}>
-          <label style={labelStyle}>Charger Name</label>
+          <label style={labelStyle}>Serial number</label>
           <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Vantage Bay 1"
-            style={inputStyle}
+            value={serial}
+            onChange={(e) => setSerial(e.target.value)}
+            placeholder="As printed on the charger's label"
+            maxLength={64}
+            style={{ ...inputStyle, fontFamily: 'monospace' }}
             autoFocus
           />
         </div>
@@ -118,58 +137,38 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
               setIdentityTouched(true);
               setIdentity(e.target.value.toUpperCase());
             }}
-            placeholder="VANTAGE-BAY-1"
+            placeholder="Defaults to the serial number"
             style={{ ...inputStyle, fontFamily: 'monospace' }}
           />
           <div style={{ fontSize: 11, color: C.slate, marginTop: 4, lineHeight: 1.5 }}>
-            This exact value must be entered on the charger. It cannot be changed later, and it must
-            be unique across every operator on the platform.
+            Defaults to the serial number, which many chargers use as their ID. This exact value
+            must be set on the charger; it cannot be changed later and must be unique across every
+            operator on the platform.
           </div>
         </div>
 
         <div style={{ gridColumn: '1/-1' }}>
           <label style={labelStyle}>Site</label>
-          <select
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            style={inputStyle}
-          >
-            <option value="">— Unassigned —</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+          <SitePicker value={locationId || null} onChange={(id) => setLocationId(id ?? '')} />
+        </div>
+
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={labelStyle}>Brand & model</label>
+          <ModelPicker value={modelId} onChange={pickModel} />
         </div>
 
         <div>
-          <label style={labelStyle}>Connectors</label>
+          <label style={labelStyle}>Guns</label>
           <input
             type="number"
             min={1}
             max={16}
-            value={connectorCount}
+            value={guns.length}
             onChange={(e) =>
-              setConnectorCount(Math.max(1, Math.min(16, Number(e.target.value) || 1)))
+              setGuns(resizeGuns(guns, Math.max(1, Math.min(16, Number(e.target.value) || 1))))
             }
             style={inputStyle}
           />
-        </div>
-
-        <div>
-          <label style={labelStyle}>Connector Type</label>
-          <select
-            value={connectorType}
-            onChange={(e) => setConnectorType(e.target.value)}
-            style={inputStyle}
-          >
-            {CONNECTOR_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div>
@@ -182,6 +181,10 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
             placeholder="7.4"
             style={inputStyle}
           />
+        </div>
+
+        <div style={{ gridColumn: '1/-1' }}>
+          <GunRows guns={guns} onChange={setGuns} />
         </div>
 
         {/* The security ladder. Profile 2 is the default and the production
@@ -267,12 +270,12 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
  */
 function CredentialsStep({
   charger,
-  connectorCount,
+  gunCount,
   securityProfile,
   onClose,
 }: {
   charger: RegisteredCharger;
-  connectorCount: number;
+  gunCount: number;
   securityProfile: 0 | 1 | 2;
   onClose: () => void;
 }) {
@@ -296,7 +299,7 @@ function CredentialsStep({
   return (
     <Modal
       title="Charger registered"
-      subtitle={`${charger.ocppIdentity} · ${connectorCount} connector${connectorCount > 1 ? 's' : ''}`}
+      subtitle={`${charger.ocppIdentity} · ${gunCount} gun${gunCount > 1 ? 's' : ''}`}
       onClose={onClose}
       width={620}
     >

@@ -58,3 +58,24 @@ export function formatDuration(seconds: number): string {
   const h = Math.floor(mins / 60);
   return `${h}h ${mins % 60}m`;
 }
+
+/**
+ * The letter a connector is known by on screen: OCPP connectorId 1 → 'A',
+ * 2 → 'B' … 27 → 'AA'. The wire and the database keep the number; only
+ * people see the letter (it should match the label on the unit).
+ */
+export function gunLetter(connectorId: number): string {
+  let n = connectorId;
+  let s = '';
+  while (n > 0) {
+    s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s || '—';
+}
+
+/** 'Gun A' for connector 1; 'Charger' for connector 0, which OCPP uses for the whole unit. */
+export function formatGun(connectorId: number | null | undefined): string {
+  if (connectorId == null) return '—';
+  return connectorId === 0 ? 'Charger' : `Gun ${gunLetter(connectorId)}`;
+}

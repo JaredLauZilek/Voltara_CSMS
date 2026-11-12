@@ -1,3 +1,4 @@
+import { CONNECTOR_STATUSES, type ConnectorStatus as ConnectorStatusName } from '@voltara/shared';
 import type { Database } from '@voltara/shared/database.types';
 
 export type ChargePoint = Database['public']['Tables']['charge_points']['Row'];
@@ -19,14 +20,34 @@ export interface ChargePointWithConnectors extends ChargePoint {
   connectors: Connector[];
   location_name: string | null;
   location_site_type: string | null;
+  /** 'ABB Terra 54' — the catalogue model it was registered as; null if none. */
+  model_label: string | null;
+}
+
+/** One gun as entered at registration: its connector and the car park lot it serves. */
+export interface GunInput {
+  connectorType: string;
+  parkingLot: string;
+}
+
+/** A catalogue model, flattened with its brand (global, curated by Voltara). */
+export interface ChargerModel {
+  id: string;
+  vendor: string;
+  name: string;
+  power_kw: number | null;
+  connector_count: number;
+  connector_types: string[];
 }
 
 export interface RegisterChargerInput {
-  name: string;
+  /** As printed on the unit; required. */
+  serialNumber: string;
   locationId: string | null;
   ocppIdentity: string | null;
-  connectorCount: number;
-  connectorType: string;
+  modelId: string | null;
+  /** One entry per gun, in connector order (Gun A first). */
+  guns: GunInput[];
   maxKw: number | null;
   /**
    * The security ladder, matching how chargers actually ship in this market:
@@ -76,14 +97,85 @@ export function displayStatus(cp: ChargePointWithConnectors, connector: Connecto
   return connector.status;
 }
 
-export const STATUS_FILTERS = [
-  'All',
-  'Available',
+/**
+ * Every connector status in plain words, for the status board. `ocpp` is the
+ * wire name an operator will meet in charger manuals and the frame log;
+ * Offline and Unknown are ours, not OCPP's.
+ */
+export const CONNECTOR_STATUS_INFO: Record<
+  ConnectorStatusName,
+  { label: string; ocpp: string | null; hint: string }
+> = {
+  Available: { label: 'Available', ocpp: 'Available', hint: 'Free for the next driver' },
+  Preparing: {
+    label: 'Preparing',
+    ocpp: 'Preparing',
+    hint: 'Plugged in or authorised, not yet charging',
+  },
+  Charging: { label: 'Charging', ocpp: 'Charging', hint: 'Delivering energy' },
+  SuspendedEV: {
+    label: 'Paused · car',
+    ocpp: 'SuspendedEV',
+    hint: 'Car stopped drawing power: full or on its own timer',
+  },
+  SuspendedEVSE: {
+    label: 'Paused · charger',
+    ocpp: 'SuspendedEVSE',
+    hint: 'Charger is withholding power: load limit or schedule',
+  },
+  Finishing: {
+    label: 'Finishing',
+    ocpp: 'Finishing',
+    hint: 'Session ended, cable still plugged in',
+  },
+  Reserved: { label: 'Reserved', ocpp: 'Reserved', hint: 'Held for one driver' },
+  Unavailable: {
+    label: 'Unavailable',
+    ocpp: 'Unavailable',
+    hint: 'Taken out of service by an operator',
+  },
+  Faulted: { label: 'Faulted', ocpp: 'Faulted', hint: 'Charger reported an error' },
+  Offline: { label: 'Offline', ocpp: null, hint: 'Not connected to the CSMS' },
+  Unknown: { label: 'Unknown', ocpp: null, hint: 'Connected, no status reported yet' },
+};
+
+/** Statuses during which a connector is occupied by a session. */
+export const IN_SESSION_STATUSES: readonly ConnectorStatusName[] = [
+  'Preparing',
   'Charging',
-  'Faulted',
-  'Offline',
-  'Pending',
-] as const;
+  'SuspendedEV',
+  'SuspendedEVSE',
+  'Finishing',
+];
+
+/**
+ * The status board, as two rows of groups. Row one answers "can a driver
+ * use it?"; row two follows a session through its stages. A status with a
+ * zero count still shows, so the board doubles as a map of the lifecycle;
+ * Unknown only appears when something is in it.
+ */
+export const STATUS_GROUPS: {
+  label: string;
+  row: 1 | 2;
+  statuses: readonly ConnectorStatusName[];
+  hideWhenEmpty?: readonly ConnectorStatusName[];
+}[] = [
+  { label: 'Ready', row: 1, statuses: ['Available'] },
+  {
+    label: 'Needs attention',
+    row: 1,
+    statuses: ['Faulted', 'Offline', 'Unknown'],
+    hideWhenEmpty: ['Unknown'],
+  },
+  { label: 'Not open to drivers', row: 1, statuses: ['Reserved', 'Unavailable'] },
+  { label: 'In a session', row: 2, statuses: IN_SESSION_STATUSES },
+];
+
+/**
+ * List filters: every connector status (set from the status board) plus
+ * Pending — a charger registered but never connected has no connectors yet.
+ */
+export const STATUS_FILTERS = ['All', ...CONNECTOR_STATUSES, 'Pending'] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 export const DETAIL_TABS = ['overview', 'sessions', 'config', 'logs'] as const;
@@ -127,7 +219,7 @@ export const REMOTE_OP_LABELS: Record<RemoteCommandActionUi, string> = {
   RemoteStartTransaction: 'Remote start',
   RemoteStopTransaction: 'Remote stop',
   Reset: 'Reset',
-  UnlockConnector: 'Unlock connector',
+  UnlockConnector: 'Unlock gun',
   ChangeAvailability: 'Change availability',
   ChangeConfiguration: 'Set configuration',
   GetConfiguration: 'Refresh configuration',

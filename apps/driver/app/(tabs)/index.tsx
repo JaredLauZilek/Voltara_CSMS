@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCoords, useNearbyChargers } from '@/features/chargers/hooks';
 import type { NearbyCharger } from '@/features/chargers/api';
 import { C, STATUS } from '@/lib/theme';
-import { Badge, Body, Empty, Label, Screen } from '@/lib/ui';
+import { Badge, Body, Empty, Screen } from '@/lib/ui';
 
 /** Nearest chargers first; each row is one charge point with its connectors. */
 export default function Chargers() {
@@ -17,7 +17,7 @@ export default function Chargers() {
     const s = q.trim().toLowerCase();
     return s
       ? data.filter((r) =>
-          `${r.site_name} ${r.operator_name} ${r.city ?? ''} ${r.charge_point_name}`
+          `${r.site_name} ${r.operator_name} ${r.city ?? ''} ${r.connectors.map((k) => k.parking_lot ?? '').join(' ')}`
             .toLowerCase()
             .includes(s),
         )
@@ -155,6 +155,7 @@ function ChargerRow({ r }: { r: NearbyCharger }) {
               }}
             >
               <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>
+                {k.parking_lot ? `${k.parking_lot} · ` : ''}
                 {k.type}
                 {k.max_kw ? ` ${k.max_kw} kW` : ''}
               </Text>
@@ -162,7 +163,6 @@ function ChargerRow({ r }: { r: NearbyCharger }) {
           );
         })}
       </View>
-      {r.charge_point_name !== r.site_name && <Label>{r.charge_point_name}</Label>}
     </Pressable>
   );
 }

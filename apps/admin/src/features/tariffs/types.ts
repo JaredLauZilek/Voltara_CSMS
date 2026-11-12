@@ -23,7 +23,7 @@ export interface TariffDetail extends Tariff {
 
 export interface AssignmentWithNames extends TariffAssignment {
   location_name: string | null;
-  charge_point_name: string | null;
+  charge_point_identity: string | null;
   connector_label: string | null;
   driver_group_name: string | null;
 }
@@ -54,7 +54,7 @@ export const SCOPE_LABELS: Record<string, string> = {
   tenant: 'Whole operator',
   location: 'Site',
   charge_point: 'Charger',
-  connector: 'Connector',
+  connector: 'Gun',
 };
 
 export const AUDIENCE_LABELS: Record<string, string> = {

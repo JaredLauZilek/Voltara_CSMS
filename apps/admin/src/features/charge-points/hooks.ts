@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CpStatusEvent } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useRealtimeEvent } from '@/shared/realtime';
@@ -114,30 +114,35 @@ export function useChargePointDetail(id: string) {
   });
 }
 
-export function useConnectionEvents(chargePointId: string) {
-  return useQuery({
-    queryKey: ['charge-points', 'events', chargePointId, 'connection'],
-    queryFn: () => api.listConnectionEvents(chargePointId),
-    refetchInterval: 30_000,
-  });
-}
+/**
+ * What the Logs tab shows: a recent span ("last 24 hours"), or one session's
+ * window. Kept as a spec rather than timestamps so the query key is stable —
+ * "now" is resolved inside the query, at fetch time.
+ */
+export type LogRange =
+  { kind: 'recent'; hours: number } | { kind: 'session'; from: string; to: string | null };
 
-export function useStatusEvents(chargePointId: string) {
+export function useChargerLog(
+  chargePointId: string,
+  range: LogRange | null,
+  includeHeartbeats: boolean,
+) {
+  const live = range?.kind === 'recent' || (range?.kind === 'session' && range.to === null);
   return useQuery({
-    queryKey: ['charge-points', 'events', chargePointId, 'status'],
-    queryFn: () => api.listStatusEvents(chargePointId),
-    refetchInterval: 30_000,
-  });
-}
-
-export function useRecentFrames(chargePointId: string, enabled = true) {
-  return useQuery({
-    queryKey: ['charge-points', 'events', chargePointId, 'frames'],
-    queryFn: () => api.listRecentFrames(chargePointId),
-    // Frames are not broadcast (volume); a short poll while the log is on
-    // screen is the honest option.
-    refetchInterval: enabled ? 5_000 : false,
-    enabled,
+    queryKey: ['charge-points', 'log', chargePointId, range, includeHeartbeats],
+    queryFn: () =>
+      api.listChargerLog(
+        chargePointId,
+        range!.kind === 'recent'
+          ? { from: new Date(Date.now() - range!.hours * 3_600_000).toISOString(), to: null }
+          : { from: range!.from, to: range!.to },
+        includeHeartbeats,
+      ),
+    enabled: range !== null,
+    // Frames are not broadcast (volume); a short poll while a live window is
+    // on screen is the honest option. A finished session's log never changes.
+    refetchInterval: live ? 10_000 : false,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -169,11 +174,30 @@ export function useRegisterChargePoint() {
   });
 }
 
+export function useChargerModels() {
+  return useQuery({
+    queryKey: ['charge-points', 'models'],
+    queryFn: api.listChargerModels,
+    // A curated catalogue: it changes on Voltara's schedule, not the operator's.
+    staleTime: 10 * 60_000,
+  });
+}
+
 export function useUpdateChargePoint() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: ChargePointUpdate }) =>
-      api.updateChargePoint(id, patch),
+    mutationFn: async ({
+      id,
+      patch,
+      lots = [],
+    }: {
+      id: string;
+      patch: ChargePointUpdate;
+      lots?: { id: string; parking_lot: string | null }[];
+    }) => {
+      await api.updateChargePoint(id, patch);
+      if (lots.length) await api.updateGunLots(lots);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['charge-points'] });
     },

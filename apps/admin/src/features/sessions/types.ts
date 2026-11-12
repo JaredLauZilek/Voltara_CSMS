@@ -7,7 +7,6 @@ export { SESSION_STATUSES, SESSION_STATUS_LABELS } from '@voltara/shared';
 export type { SessionStatus } from '@voltara/shared';
 
 export interface SessionWithChargePoint extends ChargingSession {
-  charge_point_name: string | null;
   charge_point_identity: string | null;
 }
 

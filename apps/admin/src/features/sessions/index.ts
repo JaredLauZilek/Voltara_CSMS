@@ -2,6 +2,12 @@
 export { SessionsFeature } from './SessionsFeature';
 export { ChargePointSessions } from './ChargePointSessions';
 export { SessionsTable } from './SessionsTable';
-export { useTodaySessions, useLiveSessions } from './hooks';
+export {
+  useTodaySessions,
+  useLiveSessions,
+  useOpenSessions,
+  useSessions,
+  useSessionDetail,
+} from './hooks';
 export { OPEN_STATUSES } from './types';
 export type { SessionWithChargePoint } from './types';

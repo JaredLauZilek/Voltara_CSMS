@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Badge, C, KPICard, STATUS_COLORS } from '@voltara/ui';
-import { ISSUE_SEVERITY_LABELS, formatDateTime, formatKwh } from '@voltara/shared';
+import { ISSUE_SEVERITY_LABELS, formatDateTime, formatGun, formatKwh } from '@voltara/shared';
 import type { IssueSeverity } from '@voltara/shared';
 import { useChargePoints, useUptime, displayStatus } from '@/features/charge-points';
 import { useIssues } from '@/features/issues';
@@ -149,12 +149,10 @@ export function OverviewScreen() {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {a.charge_points?.name ?? a.charge_points?.ocpp_identity ?? '—'}
+                    {a.charge_points?.ocpp_identity ?? '—'}
                   </Link>
                   <span style={{ color: C.slate, whiteSpace: 'nowrap' }}>
-                    {a.ocpp_connector_id === 0
-                      ? 'unit'
-                      : `PL ${String(a.ocpp_connector_id).padStart(2, '0')}`}
+                    {formatGun(a.ocpp_connector_id)}
                   </span>
                   <span style={{ marginLeft: 'auto' }}>
                     <Badge status={a.status} />
@@ -220,7 +218,7 @@ export function OverviewScreen() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {cp.name}
+                        {cp.ocpp_identity}
                       </Link>
                       <div
                         style={{
@@ -310,7 +308,7 @@ export function OverviewScreen() {
                     {i.title}
                   </span>
                   <span style={{ color: C.slate, whiteSpace: 'nowrap' }}>
-                    {i.charge_point_name ?? ''}
+                    {i.charge_point_identity ?? ''}
                   </span>
                   <span style={{ marginLeft: 'auto' }}>
                     <Badge

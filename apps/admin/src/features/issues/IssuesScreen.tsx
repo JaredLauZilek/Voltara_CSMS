@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Badge, C, KPICard, Pagination, STATUS_COLORS, Toolbar, usePagination } from '@voltara/ui';
-import { formatDateTime } from '@voltara/shared';
+import { formatDateTime, formatGun } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useIssues } from './hooks';
 import { IssueModal } from './IssueModal';
@@ -41,7 +41,6 @@ export function IssuesScreen() {
         q &&
         !(
           i.title.toLowerCase().includes(q) ||
-          (i.charge_point_name ?? '').toLowerCase().includes(q) ||
           (i.charge_point_identity ?? '').toLowerCase().includes(q)
         )
       )
@@ -152,7 +151,7 @@ function Row({ issue, onClick }: { issue: IssueWithChargePoint; onClick: () => v
         {issue.ocpp_connector_id ? (
           <span style={{ color: C.slate, fontWeight: 500 }}>
             {' '}
-            · connector {issue.ocpp_connector_id}
+            · {formatGun(issue.ocpp_connector_id)}
           </span>
         ) : null}
       </td>
@@ -162,7 +161,7 @@ function Row({ issue, onClick }: { issue: IssueWithChargePoint; onClick: () => v
             to={`/charge-points/${issue.charge_point_id}`}
             style={{ color: C.green, fontWeight: 600, textDecoration: 'none' }}
           >
-            {issue.charge_point_name ?? issue.charge_point_identity}
+            {issue.charge_point_identity}
           </Link>
         ) : (
           '—'

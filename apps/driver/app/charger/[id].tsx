@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { formatGun } from '@voltara/shared';
 import {
   useCoords,
   useNearbyChargers,
@@ -63,7 +64,7 @@ export default function Charger() {
           </Card>
 
           <Card style={{ gap: 10 }}>
-            <Label>Connectors · {cp.charge_point_name}</Label>
+            <Label>Choose your lot</Label>
             {cp.connectors.map((k) => {
               const status = online ? k.status : 'Offline';
               const s = STATUS[status] ?? STATUS.Unknown;
@@ -99,10 +100,16 @@ export default function Charger() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: C.ink }}>
-                      Connector {k.ocpp_connector_id} · {k.type}
+                      {k.parking_lot ?? formatGun(k.ocpp_connector_id)}
                     </Text>
                     <Body muted style={{ fontSize: 12 }}>
-                      {k.max_kw ? `up to ${k.max_kw} kW` : ''}
+                      {[
+                        k.parking_lot ? formatGun(k.ocpp_connector_id) : null,
+                        k.type,
+                        k.max_kw ? `up to ${k.max_kw} kW` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </Body>
                   </View>
                   <Badge status={status} />
@@ -133,8 +140,8 @@ export default function Charger() {
               start.isPending
                 ? 'Starting…'
                 : chosen
-                  ? `Start on connector ${chosen.ocpp_connector_id}`
-                  : 'Choose a connector'
+                  ? `Start at ${chosen.parking_lot ?? formatGun(chosen.ocpp_connector_id)}`
+                  : 'Choose your lot'
             }
             onPress={() =>
               chosen &&

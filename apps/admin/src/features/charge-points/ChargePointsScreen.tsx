@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Badge, C, KPICard, Toolbar } from '@voltara/ui';
+import { Badge, C, ChargerIcon, Toolbar } from '@voltara/ui';
 import { SITE_TYPE_LABELS, formatDateTime, type SiteType } from '@voltara/shared';
 import { useChargePoints, useUptime } from './hooks';
 import { ConnectorTile } from './ConnectorTile';
 import { AddChargerModal } from './AddChargerModal';
+import { StatusBoard } from './StatusBoard';
 import {
   displayStatus,
+  IN_SESSION_STATUSES,
   STATUS_FILTERS,
   type ChargePointWithConnectors,
   type StatusFilter,
@@ -45,15 +47,15 @@ export function ChargePointsScreen() {
     return chargePoints.filter((cp) => {
       if (q) {
         const hit =
-          cp.name.toLowerCase().includes(q) ||
           cp.ocpp_identity.toLowerCase().includes(q) ||
+          (cp.registered_serial ?? '').toLowerCase().includes(q) ||
+          cp.connectors.some((c) => (c.parking_lot ?? '').toLowerCase().includes(q)) ||
           (cp.location_name ?? '').toLowerCase().includes(q) ||
           (cp.vendor_reported ?? '').toLowerCase().includes(q);
         if (!hit) return false;
       }
       if (statusFilter === 'All') return true;
       if (statusFilter === 'Pending') return cp.lifecycle === 'pending';
-      if (statusFilter === 'Offline') return cp.connection_state !== 'online';
       return cp.connectors.some((c) => displayStatus(cp, c) === statusFilter);
     });
   }, [chargePoints, search, statusFilter]);
@@ -77,46 +79,36 @@ export function ChargePointsScreen() {
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [filtered]);
 
-  const stats = useMemo(() => {
-    let connectors = 0;
-    let available = 0;
-    let charging = 0;
-    let attention = 0;
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
     for (const cp of chargePoints) {
       for (const c of cp.connectors) {
-        connectors += 1;
         const s = displayStatus(cp, c);
-        if (s === 'Available') available += 1;
-        else if (s === 'Charging') charging += 1;
-        else if (s === 'Faulted' || s === 'Offline') attention += 1;
+        counts[s] = (counts[s] ?? 0) + 1;
       }
     }
-    return { connectors, available, charging, attention };
+    return counts;
   }, [chargePoints]);
 
   const onlineCount = chargePoints.filter((cp) => cp.connection_state === 'online').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-        <KPICard
-          label="Chargers Online"
-          value={`${onlineCount}/${chargePoints.length}`}
-          sub={`${stats.connectors} connectors`}
-          accent
-        />
-        <KPICard label="Available" value={stats.available} sub="Ready for a driver" />
-        <KPICard label="In Use" value={stats.charging} sub="Delivering energy" />
-        <KPICard label="Needs Attention" value={stats.attention} sub="Faulted or offline" />
-      </div>
+      <StatusBoard
+        counts={statusCounts}
+        chargerCount={chargePoints.length}
+        onlineCount={onlineCount}
+        selected={statusFilter}
+        onSelect={(s) => setParam('status', s)}
+      />
 
       <Toolbar
-        filters={[...STATUS_FILTERS]}
+        filters={['All', 'Pending']}
         filter={statusFilter}
         onFilterChange={(f) => setParam('status', f)}
         search={search}
         onSearchChange={(s) => setParam('q', s || null)}
-        searchPlaceholder="Search by charger, ID, site or vendor…"
+        searchPlaceholder="Search by charger ID, serial, lot, site or vendor…"
         primaryLabel="+ Add Charger"
         onPrimary={() => setShowAdd(true)}
       />
@@ -182,7 +174,7 @@ function SiteCard({
         points += 1;
         const s = displayStatus(cp, c);
         if (s === 'Available') available += 1;
-        else if (s === 'Charging') inUse += 1;
+        else if ((IN_SESSION_STATUSES as readonly string[]).includes(s)) inUse += 1;
         else if (s === 'Offline') offline += 1;
       }
     }
@@ -246,6 +238,7 @@ function SiteCard({
                     background: 'transparent',
                     padding: 0,
                     cursor: 'pointer',
+                    alignSelf: 'flex-start',
                   }}
                 >
                   <PendingTile cp={cp} />
@@ -269,7 +262,7 @@ function SiteCard({
               to={`/charge-points/${cp.id}`}
               style={{ color: C.ink, fontWeight: 600, textDecoration: 'none' }}
             >
-              {cp.name}
+              {cp.ocpp_identity}
             </Link>
             {' · '}
             {cp.lifecycle === 'pending'
@@ -304,7 +297,11 @@ function Count({ label, value, tone = C.slate }: { label: string; value: number;
   );
 }
 
-/** A charger registered but never yet seen — no connectors reported. */
+/**
+ * A charger registered but never yet seen — no connectors reported. Laid out
+ * row for row like ConnectorTile (identity · icon · connector · status) so it
+ * lines up with its neighbours; the connector number is unknown until it boots.
+ */
 function PendingTile({ cp }: { cp: ChargePointWithConnectors }) {
   return (
     <div
@@ -314,25 +311,25 @@ function PendingTile({ cp }: { cp: ChargePointWithConnectors }) {
         alignItems: 'center',
         gap: 4,
         minWidth: 84,
+        fontFamily: 'Figtree',
       }}
     >
-      <span style={{ fontSize: 10, fontWeight: 700, color: C.slate }}>{cp.ocpp_identity}</span>
       <span
+        title={cp.ocpp_identity}
         style={{
-          width: 40,
-          height: 52,
-          borderRadius: 8,
-          background: C.divider,
-          border: `1.5px dashed ${C.slate}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 20,
+          fontSize: 10,
+          fontWeight: 700,
           color: C.slate,
+          maxWidth: 96,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
         }}
       >
-        ⚡
+        {cp.ocpp_identity}
       </span>
+      <ChargerIcon color={C.slate} height={40} frame="dashed" />
+      <span style={{ fontSize: 10, fontWeight: 600, color: C.slate }}>Gun --</span>
       <span style={{ fontSize: 10, fontWeight: 700, color: C.slate }}>Awaiting</span>
     </div>
   );
