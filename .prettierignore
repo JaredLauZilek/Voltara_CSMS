@@ -4,3 +4,5 @@ dist
 pnpm-lock.yaml
 supabase/.temp
 packages/shared/src/database.types.ts
+# Parked code, kept verbatim (archive/README.md).
+archive

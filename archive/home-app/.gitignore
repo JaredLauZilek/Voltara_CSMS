@@ -1,0 +1,26 @@
+# deps / builds
+node_modules/
+dist/
+.turbo/
+.vite/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# expo (apps/home has its own .gitignore for native folders)
+.expo/
+
+# misc
+*.log
+.DS_Store
+.claude/
+coverage/
+
+# local dev orchestration (scripts/dev.mjs)
+apps/admin/public/dev-phone.json

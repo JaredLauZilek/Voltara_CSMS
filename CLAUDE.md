@@ -24,6 +24,8 @@ Voltara CSMS is a **dual-purpose** platform: it runs **Voltara's own** EV chargi
 | `supabase/`         | Migrations (system of record = Supabase Postgres), seed, edge functions                   |
 | `tests/integration` | RLS isolation suite + simulator-driven OCPP scenarios                                     |
 
+`archive/` holds parked code kept for later (currently the earlier Voltara Home app) — not a workspace, not built or linted, never imported; see `archive/README.md`.
+
 **Dependency rule:** apps import packages; packages never import apps; `packages/ui` never imports supabase or any data layer; `packages/shared` has no react/node-only/supabase imports (it must run in browser, gateway, edge functions, and Expo).
 
 ## §2 Brand identity (locked)

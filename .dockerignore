@@ -17,6 +17,7 @@ tests
 docs
 apps/admin
 packages/ui
+archive
 **/.env
 **/.env.*
 *.log

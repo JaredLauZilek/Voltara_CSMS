@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.turbo/**',
       'packages/shared/src/database.types.ts',
+      'archive/**',
       'apps/driver/.expo/**',
       'apps/driver/metro.config.js',
       'apps/driver/babel.config.js',
