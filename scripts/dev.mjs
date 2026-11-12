@@ -2,7 +2,7 @@
 /**
  * One command to bring the whole local stack up, idempotently:
  *
- *   pnpm dev          Supabase · gateway · admin
+ *   pnpm dev          Supabase · demo fleet · gateway · admin
  *   pnpm dev:phone    the same, plus the Expo tunnel for the driver app
  *
  * Supabase (with the codespace firewall fix) · the OCPP gateway · the admin
@@ -167,6 +167,28 @@ async function supabase() {
   return (await waitFor('supabase', healthy, { timeoutMs: 420_000 })) ? 'started' : 'FAILED';
 }
 
+/**
+ * Local development assumes chargers connect successfully: a demo fleet of
+ * already-connected chargers across every connector status is loaded, with a
+ * week of sessions, configuration and OCPP logs behind it, so screens can be
+ * built without hardware. Idempotent — existing rows are kept.
+ */
+async function demoFleet() {
+  try {
+    await exec(
+      'sh',
+      [
+        '-c',
+        'cat supabase/dev/demo-fleet.sql supabase/dev/demo-history.sql | docker exec -i supabase_db_Voltara_CSMS psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q',
+      ],
+      { cwd: root },
+    );
+    return 'loaded';
+  } catch {
+    return 'FAILED (pnpm db:demo-fleet to retry)';
+  }
+}
+
 async function gateway() {
   if (await httpOk('http://127.0.0.1:9221/healthz')) return 'already running';
   const env = envFile('.env.gateway.local');
@@ -251,7 +273,9 @@ async function publishPhoneLink(url) {
 
 console.log(c.bold('\nVoltara — local development\n'));
 await fixFirewall();
-const results = { supabase: await supabase(), gateway: await gateway(), admin: await admin() };
+const results = { supabase: await supabase() };
+results.fleet = results.supabase === 'FAILED' ? 'skipped' : await demoFleet();
+Object.assign(results, { gateway: await gateway(), admin: await admin() });
 const WANT_PHONE = process.argv.includes('--phone');
 const ex = WANT_PHONE ? await expo() : { status: 'off (pnpm dev:phone to start)' };
 results.expo = ex.status;
