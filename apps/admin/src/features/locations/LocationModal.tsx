@@ -125,7 +125,7 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
               address: place.address ?? f.address,
               city: place.city ?? f.city,
               // A Singapore site must not keep a Malaysian state.
-              state: place.inMalaysia ? (place.state ?? f.state) : null,
+              state: country.hasStates && place.inMalaysia ? (place.state ?? f.state) : null,
               postcode: place.postcode ?? f.postcode,
               lat: place.lat,
               lng: place.lng,
@@ -207,7 +207,7 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
 
         {/* JMB — licence prerequisite for condo sites */}
         <div>
-          <label style={labelStyle}>{country.code === 'SG' ? 'MCST name' : 'JMB / MC Name'}</label>
+          <label style={labelStyle}>{country.strataBody} name</label>
           <input
             value={form.jmb_name ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, jmb_name: e.target.value || null }))}

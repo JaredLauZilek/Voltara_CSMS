@@ -19,6 +19,12 @@ export interface CountryProfile {
   currencySymbol: string;
   numberLocale: string;
   timezone: string;
+  /** The city named beside the date in the header. */
+  timezoneCity: string;
+  /** What a hundredth of the currency is called: "sen", "cents". */
+  minorUnit: string;
+  /** The body that runs a strata/condo building. */
+  strataBody: string;
   dialCode: string;
   phonePlaceholder: string;
   /** Whether addresses carry a state. */
@@ -46,6 +52,9 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
     currencySymbol: 'RM',
     numberLocale: 'en-MY',
     timezone: 'Asia/Kuala_Lumpur',
+    timezoneCity: 'Kuala Lumpur',
+    minorUnit: 'sen',
+    strataBody: 'JMB / MC',
     dialCode: '+60',
     phonePlaceholder: '+60 12 345 6789',
     hasStates: true,
@@ -71,6 +80,9 @@ export const COUNTRIES: Record<CountryCode, CountryProfile> = {
     currencySymbol: 'S$',
     numberLocale: 'en-SG',
     timezone: 'Asia/Singapore',
+    timezoneCity: 'Singapore',
+    minorUnit: 'cents',
+    strataBody: 'MCST',
     dialCode: '+65',
     phonePlaceholder: '+65 8123 4567',
     hasStates: false,

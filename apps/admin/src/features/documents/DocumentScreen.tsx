@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, C } from '@voltara/ui';
-import { billing, formatDate, formatDateTime } from '@voltara/shared';
+import { billing, formatDate, formatDateTime, displayCurrencySymbol } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { downloadText, toCsv } from '@/shared/lib/csv';
 import { useDocument, useIssueDocument, useVoidDocument } from './hooks';
@@ -14,7 +14,7 @@ import { DOC_STATUS_BADGE, KIND_LABELS, linesOf, partyOf } from './types';
  */
 export function DocumentScreen() {
   const { id = '' } = useParams();
-  const { tenantRole } = useAuth();
+  const { tenantRole, country } = useAuth();
   const { data: doc, isLoading } = useDocument(id);
   const issue = useIssueDocument();
   const voidMut = useVoidDocument();
@@ -54,12 +54,15 @@ export function DocumentScreen() {
         },
         { header: 'Unit', value: (l) => (l.unit === 'Wh' ? 'kWh' : (l.unit ?? '')) },
         {
-          header: 'Excl. tax (RM)',
+          header: `Excl. tax (${displayCurrencySymbol()})`,
           value: (l) => ((l.amount_excl_sen ?? l.amount_sen ?? 0) / 100).toFixed(2),
         },
-        { header: 'Tax (RM)', value: (l) => ((l.tax_sen ?? 0) / 100).toFixed(2) },
         {
-          header: 'Total (RM)',
+          header: `Tax (${displayCurrencySymbol()})`,
+          value: (l) => ((l.tax_sen ?? 0) / 100).toFixed(2),
+        },
+        {
+          header: `Total (${displayCurrencySymbol()})`,
           value: (l) => ((l.amount_incl_sen ?? l.amount_sen ?? 0) / 100).toFixed(2),
         },
       ]),
@@ -422,7 +425,8 @@ export function DocumentScreen() {
                     }}
                   >
                     <span>
-                      SST {t.rate_bps / 100}% on {billing.formatSen(Number(t.taxable_sen))}
+                      {country.salesTaxCode} {t.rate_bps / 100}% on{' '}
+                      {billing.formatSen(Number(t.taxable_sen))}
                     </span>
                     <span style={{ fontFamily: 'monospace' }}>
                       {billing.formatSen(Number(t.tax_sen))}
@@ -471,11 +475,15 @@ export function DocumentScreen() {
         >
           {seller.tax_identification_no || seller.sst_registration_no ? (
             <>
-              Seller TIN {seller.tax_identification_no ?? '—'} · SST no.{' '}
-              {seller.sst_registration_no ?? '—'} ·{' '}
+              {country.taxIdentification
+                ? `Seller TIN ${seller.tax_identification_no ?? '—'}`
+                : `Seller ${country.businessRegistration.label} ${seller.business_registration_no ?? '—'}`}{' '}
+              · {country.salesTaxCode} no. {seller.sst_registration_no ?? '—'} ·{' '}
             </>
           ) : null}
-          {buyer.tax_identification_no ? <>Buyer TIN {buyer.tax_identification_no} · </> : null}
+          {country.taxIdentification && buyer.tax_identification_no ? (
+            <>Buyer TIN {buyer.tax_identification_no} · </>
+          ) : null}
           e-Invoice: {doc.einvoice_status.replace('_', ' ')} · Document {doc.id}
         </div>
       </div>

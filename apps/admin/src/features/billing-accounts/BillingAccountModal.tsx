@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CompanyCharging } from './CompanyCharging';
 import { C, Modal } from '@voltara/ui';
-import { billing, formatDate } from '@voltara/shared';
+import { billing, displayCurrencySymbol, formatDate } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
 import { useLocations } from '@/features/locations';
 import {
@@ -181,7 +181,7 @@ export function BillingAccountModal({
           <input
             value={form.name}
             onChange={(e) => set('name', e.target.value)}
-            placeholder={isBusiness ? 'e.g. JMB Vantage Residences' : 'e.g. Tan Ah Kow · Unit 12-3'}
+            placeholder={isBusiness ? 'e.g. Kinta Logistics' : 'e.g. Tan Ah Kow · Unit 12-3'}
             autoFocus={isNew}
             style={inputStyle}
           />
@@ -272,7 +272,7 @@ export function BillingAccountModal({
         {form.kind === 'corporate' && (
           <>
             <div>
-              <label style={labelStyle}>Pool cap per period (RM)</label>
+              <label style={labelStyle}>Pool cap per period ({country.currencySymbol})</label>
               <input
                 value={poolCap}
                 onChange={(e) => setPoolCap(e.target.value)}
@@ -282,7 +282,7 @@ export function BillingAccountModal({
               />
             </div>
             <div>
-              <label style={labelStyle}>Per-driver cap (RM)</label>
+              <label style={labelStyle}>Per-driver cap ({country.currencySymbol})</label>
               <input
                 value={driverCap}
                 onChange={(e) => setDriverCap(e.target.value)}
@@ -640,7 +640,7 @@ function AgreementForm({
         />
       </div>
       <div>
-        <label style={labelStyle}>Platform fee / month (RM)</label>
+        <label style={labelStyle}>Platform fee / month ({displayCurrencySymbol()})</label>
         <input
           value={fee}
           onChange={(e) => setFee(e.target.value)}
@@ -650,7 +650,7 @@ function AgreementForm({
         />
       </div>
       <div>
-        <label style={labelStyle}>Electricity (RM/kWh)</label>
+        <label style={labelStyle}>Electricity ({displayCurrencySymbol()}/kWh)</label>
         <input
           value={elec}
           onChange={(e) => setElec(e.target.value)}

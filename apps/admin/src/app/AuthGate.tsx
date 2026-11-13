@@ -69,11 +69,18 @@ export function AuthGate({ children }: Props) {
       setSession(data.session);
     };
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
+      if (DEV_AUTO_LOGIN) {
+        // Dev: never trust a stored sign-in. The local database is reset and
+        // re-seeded at will, so a remembered token can name an operator (or a
+        // country) the account no longer belongs to. Sign in afresh each load.
+        setLoading(false);
+        await devSignIn();
+        return;
+      }
       setSession(data.session);
       setLoading(false);
-      if (!data.session) void devSignIn();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);

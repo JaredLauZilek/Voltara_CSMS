@@ -8,6 +8,7 @@ import {
   formatGun,
   formatKwh,
   gunLetter,
+  displayCurrencySymbol,
 } from '@voltara/shared';
 import { useBillingAccounts } from '@/features/billing-accounts';
 import { useChargePoints } from '@/features/charge-points';
@@ -92,28 +93,34 @@ export function CdrsScreen() {
         { header: 'Charging (min)', value: (c) => Math.round(c.total_time_s / 60) },
         { header: 'Idle (min)', value: (c) => Math.round(c.total_parking_time_s / 60) },
         {
-          header: 'Energy cost (RM)',
+          header: `Energy cost (${displayCurrencySymbol()})`,
           value: (c) => (Number(c.total_energy_cost_sen) / 100).toFixed(2),
         },
         {
-          header: 'Time cost (RM)',
+          header: `Time cost (${displayCurrencySymbol()})`,
           value: (c) => (Number(c.total_time_cost_sen) / 100).toFixed(2),
         },
         {
-          header: 'Idle cost (RM)',
+          header: `Idle cost (${displayCurrencySymbol()})`,
           value: (c) => (Number(c.total_parking_cost_sen) / 100).toFixed(2),
         },
         {
-          header: 'Session fee (RM)',
+          header: `Session fee (${displayCurrencySymbol()})`,
           value: (c) => (Number(c.total_fixed_cost_sen) / 100).toFixed(2),
         },
         {
-          header: 'Subtotal excl. tax (RM)',
+          header: `Subtotal excl. tax (${displayCurrencySymbol()})`,
           value: (c) => (Number(c.subtotal_sen) / 100).toFixed(2),
         },
         { header: 'Tax rate (%)', value: (c) => c.tax_rate_bps / 100 },
-        { header: 'Tax (RM)', value: (c) => (Number(c.tax_sen) / 100).toFixed(2) },
-        { header: 'Total (RM)', value: (c) => (Number(c.total_sen) / 100).toFixed(2) },
+        {
+          header: `Tax (${displayCurrencySymbol()})`,
+          value: (c) => (Number(c.tax_sen) / 100).toFixed(2),
+        },
+        {
+          header: `Total (${displayCurrencySymbol()})`,
+          value: (c) => (Number(c.total_sen) / 100).toFixed(2),
+        },
         {
           header: 'Billable',
           value: (c) =>

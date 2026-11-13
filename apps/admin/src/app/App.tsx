@@ -440,7 +440,7 @@ function Shell() {
                 whiteSpace: 'nowrap',
               }}
             >
-              {today} · Kuala Lumpur
+              {today} · {country.timezoneCity}
             </div>
           </div>
           <LiveDot />

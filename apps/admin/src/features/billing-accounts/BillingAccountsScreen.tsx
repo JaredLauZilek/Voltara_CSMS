@@ -66,7 +66,7 @@ export function BillingAccountsScreen() {
         <KPICard
           label="Site hosts"
           value={accounts.filter((a) => a.kind === 'site_host').length}
-          sub="JMBs and landlords"
+          sub="Buildings and landlords"
         />
       </div>
       <Toolbar
