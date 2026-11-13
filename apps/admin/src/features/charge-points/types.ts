@@ -149,26 +149,24 @@ export const IN_SESSION_STATUSES: readonly ConnectorStatusName[] = [
 ];
 
 /**
- * The status board, as two rows of groups. Row one answers "can a driver
- * use it?"; row two follows a session through its stages. A status with a
- * zero count still shows, so the board doubles as a map of the lifecycle;
- * Unknown only appears when something is in it.
+ * The status board's groups, left to right in one row, in the order a gun
+ * moves through them. A status with a zero count still shows, so the board
+ * doubles as a map of the lifecycle; Unknown only appears when something is
+ * in it.
  */
 export const STATUS_GROUPS: {
   label: string;
-  row: 1 | 2;
   statuses: readonly ConnectorStatusName[];
   hideWhenEmpty?: readonly ConnectorStatusName[];
 }[] = [
-  { label: 'Ready', row: 1, statuses: ['Available'] },
+  { label: 'Ready', statuses: ['Available'] },
+  { label: 'In a session', statuses: IN_SESSION_STATUSES },
+  { label: 'Not open', statuses: ['Reserved', 'Unavailable'] },
   {
     label: 'Needs attention',
-    row: 1,
     statuses: ['Faulted', 'Offline', 'Unknown'],
     hideWhenEmpty: ['Unknown'],
   },
-  { label: 'Not open to drivers', row: 1, statuses: ['Reserved', 'Unavailable'] },
-  { label: 'In a session', row: 2, statuses: IN_SESSION_STATUSES },
 ];
 
 /**

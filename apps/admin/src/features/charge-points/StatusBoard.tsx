@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import { C, STATUS_COLORS, useViewport } from '@voltara/ui';
+import { C, STATUS_COLORS } from '@voltara/ui';
 import { CONNECTOR_STATUS_INFO, STATUS_GROUPS, type StatusFilter } from './types';
 
 type Status = keyof typeof CONNECTOR_STATUS_INFO;
 
-const GAP = 12;
+const TILE = 88;
+const TILE_GAP = 8;
 
 /**
- * Connector count per status, across the whole network, at a glance.
+ * Gun count per status, across the whole network, at a glance.
  *
  * Every status is always on the board — including the empty ones — so it
  * doubles as a map of what each OCPP status means (the ⓘ on each tile
- * explains it). Two rows of equal tiles: groups share one grid of equal
- * columns; on narrow screens each group wraps on its own. Clicking a tile
- * filters the list below to it.
+ * explains it). One row of small square tiles, grouped in lifecycle order;
+ * the row wraps on narrow screens. Clicking a tile filters the list below.
  */
 export function StatusBoard({
   counts,
@@ -28,21 +28,14 @@ export function StatusBoard({
   selected: StatusFilter;
   onSelect: (status: StatusFilter) => void;
 }) {
-  const { width } = useViewport();
   const connectorCount = Object.values(counts).reduce((a, b) => a + b, 0);
 
   const groups = STATUS_GROUPS.map((group) => ({
     label: group.label,
-    row: group.row,
     statuses: group.statuses.filter(
       (s) => !group.hideWhenEmpty?.includes(s) || (counts[s] ?? 0) > 0,
     ),
   }));
-  const rowLength = (row: number) =>
-    groups.filter((g) => g.row === row).reduce((n, g) => n + g.statuses.length, 0);
-  const columns = Math.max(rowLength(1), rowLength(2));
-  // Two rows need roughly 140px per tile (plus the sidebar) to stay legible.
-  const twoRows = width >= columns * 140 + 300;
 
   return (
     <div
@@ -50,10 +43,10 @@ export function StatusBoard({
         background: C.white,
         borderRadius: 16,
         border: `1px solid ${C.border}`,
-        padding: '20px 24px',
+        padding: '16px 24px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 16,
+        gap: 12,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
@@ -63,58 +56,30 @@ export function StatusBoard({
         </span>
       </div>
 
-      <div
-        style={
-          twoRows
-            ? {
-                display: 'grid',
-                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                gap: `16px ${GAP}px`,
-              }
-            : { display: 'flex', flexDirection: 'column', gap: 16 }
-        }
-      >
-        {groups.map((group) => (
-          <div
-            key={group.label}
-            style={{
-              gridColumn: twoRows ? `span ${group.statuses.length}` : undefined,
-              gridRow: twoRows ? group.row : undefined,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-              minWidth: 0,
-            }}
-          >
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 20px' }}>
+        {groups.map((group, g) => (
+          <div key={group.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 700,
                 color: C.slate,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',
                 whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
               {group.label}
             </span>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: twoRows
-                  ? `repeat(${group.statuses.length}, minmax(0, 1fr))`
-                  : 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: GAP,
-              }}
-            >
+            <div style={{ display: 'flex', gap: TILE_GAP }}>
               {group.statuses.map((s) => (
                 <StatusTile
                   key={s}
                   status={s}
                   count={counts[s] ?? 0}
                   active={selected === s}
+                  // Popovers open towards the middle of the board.
+                  popoverSide={g < groups.length / 2 ? 'left' : 'right'}
                   onClick={() => onSelect(selected === s ? 'All' : s)}
                 />
               ))}
@@ -130,11 +95,13 @@ function StatusTile({
   status,
   count,
   active,
+  popoverSide,
   onClick,
 }: {
   status: Status;
   count: number;
   active: boolean;
+  popoverSide: 'left' | 'right';
   onClick: () => void;
 }) {
   const info = CONNECTOR_STATUS_INFO[status];
@@ -143,44 +110,29 @@ function StatusTile({
   const tone = empty ? C.slate : palette.color;
 
   return (
-    <div style={{ position: 'relative', minWidth: 0 }}>
+    <div style={{ position: 'relative', width: TILE, height: TILE, flexShrink: 0 }}>
       <button
         onClick={onClick}
         title={active ? 'Click to clear the filter' : 'Click to filter the list'}
         style={{
           width: '100%',
-          height: 96,
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          padding: '12px 14px',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 6,
+          padding: '14px 4px 6px',
           borderRadius: 12,
           border: `1.5px solid ${active ? palette.color : 'transparent'}`,
           background: empty ? C.seasalt : palette.bg,
           cursor: 'pointer',
           fontFamily: 'Figtree',
-          textAlign: 'left',
         }}
       >
         <span
           style={{
-            maxWidth: 'calc(100% - 26px)',
-            fontSize: 11,
-            fontWeight: 700,
-            color: tone,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {info.label}
-        </span>
-        <span
-          style={{
-            fontSize: 32,
+            fontSize: 26,
             fontWeight: 700,
             letterSpacing: '-0.04em',
             lineHeight: 1,
@@ -190,8 +142,21 @@ function StatusTile({
         >
           {count}
         </span>
+        <span
+          style={{
+            fontSize: 9.5,
+            fontWeight: 700,
+            color: tone,
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            lineHeight: 1.2,
+            textAlign: 'center',
+          }}
+        >
+          {info.label}
+        </span>
       </button>
-      <InfoButton info={info} tone={tone} />
+      <InfoButton info={info} tone={tone} side={popoverSide} />
     </div>
   );
 }
@@ -200,15 +165,17 @@ function StatusTile({
 function InfoButton({
   info,
   tone,
+  side,
 }: {
   info: (typeof CONNECTOR_STATUS_INFO)[Status];
   tone: string;
+  side: 'left' | 'right';
 }) {
   const [open, setOpen] = useState(false);
 
   return (
     <span
-      style={{ position: 'absolute', top: 8, right: 8 }}
+      style={{ position: 'absolute', top: 5, right: 5 }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
@@ -218,8 +185,8 @@ function InfoButton({
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setOpen(false)}
         style={{
-          width: 22,
-          height: 22,
+          width: 16,
+          height: 16,
           borderRadius: 99,
           border: `1px solid ${tone}`,
           background: C.white,
@@ -234,7 +201,7 @@ function InfoButton({
       >
         <span
           aria-hidden
-          style={{ fontFamily: 'Figtree', fontSize: 13, fontWeight: 800, lineHeight: 1 }}
+          style={{ fontFamily: 'Figtree', fontSize: 10, fontWeight: 800, lineHeight: 1 }}
         >
           i
         </span>
@@ -244,8 +211,8 @@ function InfoButton({
           role="tooltip"
           style={{
             position: 'absolute',
-            top: 28,
-            right: 0,
+            top: 22,
+            ...(side === 'left' ? { left: -60 } : { right: 0 }),
             zIndex: 10,
             width: 220,
             background: C.white,
