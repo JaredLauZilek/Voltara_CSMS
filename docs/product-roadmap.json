@@ -1,0 +1,501 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-13T00:00:00.000Z",
+  "items": [
+    {
+      "id": "cf3d6a75",
+      "title": "Connect a real charger through ocpp.voltaracharging.com",
+      "notes": "Charger 123456 is registered on staging (Open security). Enter the address and ID on the unit, confirm boot, status and a full charging session.",
+      "area": "Gateway & OCPP",
+      "status": "now",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "5c700e6d",
+      "title": "Merge PR #3",
+      "notes": "Open-charger credentials fix, one-row status board, place search for locations, this roadmap board.",
+      "area": "Platform",
+      "status": "now",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "75910bf9",
+      "title": "Decide how chargers are named",
+      "notes": "Names were removed: operators see the charge point ID and serial, drivers see the car park lot. Research pending on whether a suggested display name is still wanted.",
+      "area": "Chargers",
+      "status": "now",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "c70ba2b2",
+      "title": "Live session card per gun on the charger page",
+      "notes": "kW now, kWh, battery %, elapsed time, cost so far and driver, with a small power graph. Replaces the stale status table other platforms show.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "6007b0ae",
+      "title": "Driver app MVP (Phase 4)",
+      "notes": "Sign-in, charger map and list with live availability, start and stop, live session screen, history. Scaffold and driver access layer exist.",
+      "area": "Driver app",
+      "status": "next",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "91676f1f",
+      "title": "Logs: date range and download",
+      "notes": "The timeline already pairs requests with replies and filters by session. Add a custom date range and a CSV/JSON download for vendor tickets.",
+      "area": "Sessions & logs",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "16bab6c1",
+      "title": "Configuration: key settings in plain language",
+      "notes": "Heartbeat, meter interval and similar at the top of the Configuration tab, with recommended values.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "187206bc",
+      "title": "Configuration templates per charger model",
+      "notes": "A recommended baseline applied at boot, and a warning when a charger drifts from it.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "4b547065",
+      "title": "Availability: reason and pending state",
+      "notes": "Record why a gun was taken out of service; show \"takes effect after the session\" when the charger answers Scheduled.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "89bcd50e",
+      "title": "Remote start for app drivers and billing accounts",
+      "notes": "Remote start can only pick an RFID card today.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "eb653c07",
+      "title": "Optional label per gun",
+      "notes": "Override the automatic letter (A, B) where the sticker on the unit says something else; max 30 characters so it can form the roaming EVSE ID.",
+      "area": "Chargers",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "3e68badf",
+      "title": "Show the car park lot on session screens",
+      "notes": "Needs a narrow read permission so a driver can see the gun used in their own session.",
+      "area": "Driver app",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "d38cb2a8",
+      "title": "Directions buttons: Google Maps and Waze",
+      "notes": "Use the shared mapLinks helper and each site's pin.",
+      "area": "Driver app",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "7b76f787",
+      "title": "Staging label in the admin",
+      "notes": "A visible marker when the admin is connected to staging, so it is not mistaken for the local demo.",
+      "area": "Platform",
+      "status": "next",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "cd7a61f5",
+      "title": "Start the staging admin with pnpm dev",
+      "notes": "Port 5174 currently needs starting by hand after a codespace restart.",
+      "area": "Platform",
+      "status": "next",
+      "priority": "low",
+      "doneAt": null
+    },
+    {
+      "id": "a28934f6",
+      "title": "Charger bolt icon in the driver app",
+      "notes": "Replace the yellow emoji bolt with the drawn icon used in the admin.",
+      "area": "Driver app",
+      "status": "next",
+      "priority": "low",
+      "doneAt": null
+    },
+    {
+      "id": "d495af11",
+      "title": "Power limit per charger",
+      "notes": "SetChargingProfile from the admin: typed limit in kW or A, optional schedule, accepted/rejected feedback, and the limit currently in force.",
+      "area": "Smart charging",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "44eca743",
+      "title": "Site load management",
+      "notes": "Share a building's capacity across its chargers automatically. The condo selling point: avoids TNB maximum-demand charges.",
+      "area": "Smart charging",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "6ef15373",
+      "title": "Payments (Phase 5)",
+      "notes": "Stripe: cards, FPX, GrabPay; per-tenant Connect. DuitNow QR guest checkout. Needs the tax and BNM opinion first.",
+      "area": "Payments",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "dd1e6bfb",
+      "title": "SST and BNM opinion",
+      "notes": "Malaysian tax and legal opinion; required before payments go live.",
+      "area": "Compliance",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "a3052b3f",
+      "title": "Pre-production review",
+      "notes": "Strong staging password and two-factor sign-in, branch protection on main, production Supabase project and Fly app, admin deploy (Cloudflare secrets), leaked-password protection.",
+      "area": "Platform",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "1dd3c594",
+      "title": "White-label and onboarding (Phase 6)",
+      "notes": "Tenant self-serve onboarding, theme provider, tenant switcher, platform-admin console, production project.",
+      "area": "White-label",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "3971d7e0",
+      "title": "Firmware updates",
+      "notes": "UpdateFirmware with progress tracking and staged rollout.",
+      "area": "Chargers",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "e66844b4",
+      "title": "Diagnostics upload",
+      "notes": "GetDiagnostics for vendor support tickets.",
+      "area": "Chargers",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "2b03a2d7",
+      "title": "Offline RFID list",
+      "notes": "SendLocalList so residents' cards work when a basement charger loses its connection.",
+      "area": "Chargers",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "e93a37fa",
+      "title": "Fault alerts",
+      "notes": "Plain-language vendor error codes, automatic issues, \"offline for more than X minutes\" notifications.",
+      "area": "Chargers",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "9ffa4765",
+      "title": "Bulk actions",
+      "notes": "Reset, apply configuration or update firmware across many chargers.",
+      "area": "Chargers",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "b21b8fa0",
+      "title": "OCPP 2.0.1 adapter",
+      "notes": "A second adapter onto the same domain model; decide how gun letters map to EVSE numbers.",
+      "area": "Gateway & OCPP",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "ad64ca09",
+      "title": "OCPI roaming",
+      "notes": "CPO module; EVSE IDs built from the gun label.",
+      "area": "Gateway & OCPP",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "d26b5da9",
+      "title": "MEVnet / ST reporting exports",
+      "notes": "Full reporting; a first export stub exists.",
+      "area": "Compliance",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "df75e610",
+      "title": "Singapore support",
+      "notes": "Country on sites, no Malaysian state, local licensing rules.",
+      "area": "Compliance",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "3707d482",
+      "title": "Merge the Voltara Home app",
+      "notes": "Parked in archive/home-app. Homeowner experience into the driver app, staff portal into the admin, schema reconciled by new migrations.",
+      "area": "Home app",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "18053ab5",
+      "title": "Capture the HiCi Bluetooth protocol",
+      "notes": "The archived protocol layer is a guess; bench capture needed before it talks to real units.",
+      "area": "Home app",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "1dd8b82b",
+      "title": "Production charger catalogue",
+      "notes": "Curate real brands and models; today's list is dev data.",
+      "area": "Platform",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "95ed4611",
+      "title": "Real tariffs as golden test cases",
+      "notes": "Voltara's actual tariffs in the cost-engine tests.",
+      "area": "Billing",
+      "status": "later",
+      "priority": "medium",
+      "doneAt": null
+    },
+    {
+      "id": "80537deb",
+      "title": "Place search provider decision",
+      "notes": "Stay on OpenStreetMap or move to Google Places (needs a billed key).",
+      "area": "Platform",
+      "status": "later",
+      "priority": "low",
+      "doneAt": null
+    },
+    {
+      "id": "dd592884",
+      "title": "Phase 0: scaffold, CI, Supabase, tenancy, design system",
+      "notes": "",
+      "area": "Platform",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-07-26"
+    },
+    {
+      "id": "fd6d3369",
+      "title": "Phase 1: OCPP gateway core",
+      "notes": "Handlers, Basic Auth, frame log, session state machine, command bus, quirks layer.",
+      "area": "Gateway & OCPP",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-07-29"
+    },
+    {
+      "id": "581a5beb",
+      "title": "Phase 2: admin charger management",
+      "notes": "Registration, live board, remote operations, configuration, sessions, OCPP log, ID tags, issues, team.",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-09-19"
+    },
+    {
+      "id": "476f8bd6",
+      "title": "Phase 3: tariffs, billing, charging records, reports",
+      "notes": "Cost engine, CDRs, receipts and invoices, revenue reports.",
+      "area": "Billing",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-09-21"
+    },
+    {
+      "id": "a4ce2b0c",
+      "title": "Slim dev container",
+      "notes": "Ubuntu, Node 22 and Docker only; disk use from about 90% to about 20%.",
+      "area": "Platform",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-02"
+    },
+    {
+      "id": "3d4273b3",
+      "title": "Demo fleet and a week of sample history",
+      "notes": "Loaded by pnpm dev so screens work without hardware.",
+      "area": "Platform",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-02"
+    },
+    {
+      "id": "148d67eb",
+      "title": "Remote stop picks the running session",
+      "notes": "",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-02"
+    },
+    {
+      "id": "9f244b5c",
+      "title": "Read-only configuration keys",
+      "notes": "Stored by the gateway and labelled in the admin.",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-02"
+    },
+    {
+      "id": "76d1ad64",
+      "title": "Logs tab as one timeline",
+      "notes": "Requests paired with replies, filters by type, window or session.",
+      "area": "Sessions & logs",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-02"
+    },
+    {
+      "id": "5f5c4f07",
+      "title": "Cost column and session charts",
+      "notes": "Charts draw at real width with a hover readout.",
+      "area": "Sessions & logs",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-03"
+    },
+    {
+      "id": "7ced9712",
+      "title": "Charger icon and Gun A / Gun B labels",
+      "notes": "",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-03"
+    },
+    {
+      "id": "5e02efec",
+      "title": "Add Charger: serial, brand and model, car park lots",
+      "notes": "Serial required; no charger names.",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-03"
+    },
+    {
+      "id": "288b7447",
+      "title": "Voltara Home app archived in the repo",
+      "notes": "",
+      "area": "Home app",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-12"
+    },
+    {
+      "id": "df5c3908",
+      "title": "Permanent charger address: ocpp.voltaracharging.com",
+      "notes": "DNS at GoDaddy, certificate on Fly.",
+      "area": "Gateway & OCPP",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    },
+    {
+      "id": "468b6619",
+      "title": "Automatic deploys to staging",
+      "notes": "Merging to main updates the staging database and redeploys the gateway.",
+      "area": "Platform",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    },
+    {
+      "id": "68b512e5",
+      "title": "Admin connected to staging",
+      "notes": "Port 5174, with dev auto sign-in.",
+      "area": "Platform",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    },
+    {
+      "id": "3363d09d",
+      "title": "Status board: guns per OCPP status",
+      "notes": "One row of small tiles; click to filter.",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    },
+    {
+      "id": "fccb8ffd",
+      "title": "Open chargers: both server addresses, no key step",
+      "notes": "",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    },
+    {
+      "id": "468c694f",
+      "title": "Locations: find a place, pin and map links",
+      "notes": "",
+      "area": "Chargers",
+      "status": "done",
+      "priority": "medium",
+      "doneAt": "2026-11-13"
+    }
+  ]
+}

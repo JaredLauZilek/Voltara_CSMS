@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { roadmapFile } from './vite.roadmap';
 
 // Local Supabase reached through the dev server rather than directly: in a
 // Codespace the browser runs on another machine, so `127.0.0.1:54321` is dead
@@ -10,7 +11,7 @@ import react from '@vitejs/plugin-react';
 const LOCAL_SUPABASE = process.env.LOCAL_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), roadmapFile()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

@@ -18,6 +18,7 @@ import {
   Settings,
   ScrollText,
   Smartphone,
+  ListChecks,
   Tags,
   Users,
   UsersRound,
@@ -63,6 +64,20 @@ function devRoute(): RouteDef {
   };
 }
 
+// Dev-only, same pattern: the product roadmap board (docs/product-roadmap.json).
+function roadmapRoute(): RouteDef {
+  const Lazy = lazy(() => import('@/features/roadmap').then((m) => ({ default: m.RoadmapScreen })));
+  return {
+    path: '/roadmap',
+    title: 'Roadmap',
+    screen: () => (
+      <Suspense fallback={null}>
+        <Lazy />
+      </Suspense>
+    ),
+  };
+}
+
 export const ROUTES: RouteDef[] = [
   { path: '/overview', title: 'Overview', screen: OverviewScreen },
   { path: '/charge-points', title: 'Chargers', screen: ChargePointsFeature },
@@ -79,7 +94,7 @@ export const ROUTES: RouteDef[] = [
   { path: '/reports', title: 'Reports', screen: ReportsScreen },
   { path: '/team', title: 'Team', screen: TeamScreen },
   { path: '/operator', title: 'Operator', screen: OperatorSettingsScreen },
-  ...(import.meta.env.DEV ? [devRoute()] : []),
+  ...(import.meta.env.DEV ? [roadmapRoute(), devRoute()] : []),
 ];
 
 /** Where "/" lands. */
@@ -136,7 +151,15 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   ...(import.meta.env.DEV
-    ? [{ label: 'Dev', items: [{ path: '/dev', label: 'Phone & services', icon: Smartphone }] }]
+    ? [
+        {
+          label: 'Dev',
+          items: [
+            { path: '/roadmap', label: 'Roadmap', icon: ListChecks },
+            { path: '/dev', label: 'Phone & services', icon: Smartphone },
+          ],
+        },
+      ]
     : []),
 ];
 
