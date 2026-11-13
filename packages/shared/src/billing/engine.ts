@@ -14,6 +14,7 @@
 //  - min_price / max_price cap the subtotal.
 // Our extension: restrictions.grace_period_s delays PARKING_TIME billing.
 
+import { displayCurrencySymbol } from '../countries';
 import { bps, exclFromIncl, roundSen, type Sen } from './money';
 import type {
   DayOfWeek,
@@ -412,7 +413,7 @@ function adjustment(label: string, amountExcl: Sen, rate: number): CostLine {
   };
 }
 
-const fmt = (sen: number) => `RM ${(sen / 100).toFixed(2)}`;
+const fmt = (sen: number) => `${displayCurrencySymbol()} ${(sen / 100).toFixed(2)}`;
 const fmtDuration = (s: number) => {
   const m = Math.round(s / 60);
   return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`;

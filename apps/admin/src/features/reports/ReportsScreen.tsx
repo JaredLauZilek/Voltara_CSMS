@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { C, KPICard, Toolbar } from '@voltara/ui';
-import { billing, formatDuration, formatKwh } from '@voltara/shared';
+import { billing, formatDuration, formatKwh, displayCurrencySymbol } from '@voltara/shared';
 import { downloadText, monthRange, toCsv } from '@/shared/lib/csv';
 import { useRevenueSummary } from './hooks';
 import type { RevenueRow } from './api';
@@ -137,9 +137,15 @@ export function ReportsScreen() {
         { header: 'Unbillable', value: (r) => r.unbillable_sessions },
         { header: 'Energy (kWh)', value: (r) => (r.energy_wh / 1000).toFixed(3) },
         { header: 'Idle (min)', value: (r) => Math.round(r.idle_s / 60) },
-        { header: 'Excl. tax (RM)', value: (r) => (r.subtotal_sen / 100).toFixed(2) },
-        { header: 'Tax (RM)', value: (r) => (r.tax_sen / 100).toFixed(2) },
-        { header: 'Total (RM)', value: (r) => (r.total_sen / 100).toFixed(2) },
+        {
+          header: `Excl. tax (${displayCurrencySymbol()})`,
+          value: (r) => (r.subtotal_sen / 100).toFixed(2),
+        },
+        { header: `Tax (${displayCurrencySymbol()})`, value: (r) => (r.tax_sen / 100).toFixed(2) },
+        {
+          header: `Total (${displayCurrencySymbol()})`,
+          value: (r) => (r.total_sen / 100).toFixed(2),
+        },
       ]),
     );
 

@@ -9,7 +9,7 @@ import type { Location, LocationInsert, SiteType } from './types';
 const FILTERS = ['All', 'Public', 'Condo', 'Workplace', 'Home', 'Fleet Depot'] as const;
 
 export function LocationsScreen() {
-  const { tenantId } = useAuth();
+  const { tenantId, country } = useAuth();
   const { data: locations = [], isLoading } = useLocations();
   const createMut = useCreateLocation();
   const updateMut = useUpdateLocation();
@@ -72,7 +72,7 @@ export function LocationsScreen() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         <KPICard label="Total Sites" value={total} sub="All site types" accent />
-        <KPICard label="Condo Sites" value={condoCount} sub="Strata / JMB" />
+        <KPICard label="Condo Sites" value={condoCount} sub={`Strata / ${country.strataBody}`} />
         <KPICard label="Public Sites" value={publicCount} sub="Open to drivers" />
         <KPICard label="Other Sites" value={otherCount} sub="Workplace · home · depot" />
       </div>
@@ -89,7 +89,7 @@ export function LocationsScreen() {
           setSearch(s);
           resetPage();
         }}
-        searchPlaceholder="Search by name, city, state or JMB…"
+        searchPlaceholder="Search by name, city or area…"
         primaryLabel="+ Add Location"
         onPrimary={() => setModal('new')}
       />
@@ -105,7 +105,14 @@ export function LocationsScreen() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: C.seasalt }}>
-              {['Location', 'Site Type', 'City', 'State', 'JMB / MC', 'Added'].map((h) => (
+              {[
+                'Location',
+                'Site Type',
+                'City',
+                country.hasStates ? 'State' : country.postcodeLabel,
+                country.strataBody,
+                'Added',
+              ].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -167,6 +174,7 @@ export function LocationsScreen() {
 }
 
 function LocationRow({ l, onClick }: { l: Location; onClick: () => void }) {
+  const hasStates = useAuth().country.hasStates;
   const typeLabel = SITE_TYPE_LABELS[l.site_type as SiteType] ?? l.site_type;
   return (
     <tr
@@ -201,7 +209,9 @@ function LocationRow({ l, onClick }: { l: Location; onClick: () => void }) {
         <Badge status={typeLabel} />
       </td>
       <td style={{ padding: '13px 16px', color: C.slate }}>{l.city ?? '—'}</td>
-      <td style={{ padding: '13px 16px', color: C.slate }}>{l.state ?? '—'}</td>
+      <td style={{ padding: '13px 16px', color: C.slate }}>
+        {(hasStates ? l.state : l.postcode) ?? '—'}
+      </td>
       <td style={{ padding: '13px 16px', color: C.slate }}>{l.jmb_name ?? '—'}</td>
       <td style={{ padding: '13px 16px', color: C.slate }}>{formatDate(l.created_at)}</td>
     </tr>

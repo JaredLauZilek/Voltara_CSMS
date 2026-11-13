@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { C } from '@voltara/ui';
-import { billing } from '@voltara/shared';
+import { billing, displayCurrencySymbol } from '@voltara/shared';
+import { useAuth } from '@/app/auth';
 import { PricePreview } from './PricePreview';
 import type { NewVersionInput, TariffVersion, TaxProfile } from './types';
 import { elementsOf } from './types';
@@ -53,6 +54,7 @@ export function TariffEditor({
   taxProfiles: TaxProfile[];
   onChange: (value: TariffEditorValue) => void;
 }) {
+  const { country } = useAuth();
   const detected = useMemo(() => billing.detectPreset(elementsOf(initial)), [initial]);
   const [kind, setKind] = useState<billing.PresetKind>(initial ? detected.kind : 'per_kwh');
   const perKwh = useMoney(detected.params.senPerKwh ?? 120);
@@ -134,7 +136,7 @@ export function TariffEditor({
   const money = (m: ReturnType<typeof useMoney>, placeholder = '1.20') => (
     <div style={{ position: 'relative' }}>
       <span style={{ position: 'absolute', left: 12, top: 9, fontSize: 13, color: C.slate }}>
-        RM
+        {displayCurrencySymbol()}
       </span>
       <input
         value={m.text}
@@ -248,7 +250,8 @@ export function TariffEditor({
         )}
         {kind === 'free' && (
           <div style={{ gridColumn: '1/-1', fontSize: 13, color: C.slate }}>
-            Sessions are recorded and priced at RM 0.00 — still visible in reports and exports.
+            Sessions are recorded and priced at {billing.formatSen(0)} — still visible in reports
+            and exports.
           </div>
         )}
       </div>
@@ -278,7 +281,7 @@ export function TariffEditor({
             }}
           >
             {error ??
-              'Elements are evaluated in order; the first whose restrictions match prices each dimension. Prices are sen per kWh / per hour / per session; step_size in Wh or seconds.'}
+              `Elements are evaluated in order; the first whose restrictions match prices each dimension. Prices are ${country.minorUnit} per kWh / per hour / per session; step_size in Wh or seconds.`}
           </div>
         </div>
       )}

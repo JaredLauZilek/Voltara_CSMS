@@ -20,7 +20,7 @@ export const ACCOUNT_KINDS = ['individual', 'corporate', 'site_host'] as const;
 export const ACCOUNT_KIND_LABELS: Record<string, string> = {
   individual: 'Individual',
   corporate: 'Corporate',
-  site_host: 'Site host (JMB / landlord)',
+  site_host: 'Site host (building / landlord)',
 };
 
 export const BILLING_MODELS = [

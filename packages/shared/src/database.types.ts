@@ -2426,6 +2426,7 @@ export type Database = {
           window_seconds: number
         }[]
       }
+      country_currency: { Args: { p_country: string }; Returns: string }
       create_monthly_partition: {
         Args: { p_month: string; p_table: string }
         Returns: undefined

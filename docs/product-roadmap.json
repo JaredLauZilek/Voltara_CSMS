@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T12:06:32.157Z",
+  "updatedAt": "2026-11-13T12:14:20.720Z",
   "items": [
     {
       "id": "d5196b78",
@@ -544,8 +544,8 @@
     },
     {
       "id": "719ca894",
-      "title": "Operator accounts: other companies sign up and log in",
-      "notes": "KIV. A CPO or JMB creates its own operator account, logs in with its own users, and manages only its own chargers. Today operators exist only as rows created by Voltara (tenant #1 and the demo tenant). Includes sign-up, inviting staff, and choosing a plan.",
+      "title": "Operator accounts: Voltara creates a customer's account and picks its country",
+      "notes": "KIV. A screen for Voltara (platform owner) to create an operator account for a customer: company name, first login, and the country (Malaysia or Singapore), which can never be changed afterwards. The operator then logs in and manages only its own chargers. The database already holds the fixed country per operator; today accounts are still created by hand. Self sign-up by operators comes after this.",
       "area": "White-label",
       "status": "later",
       "priority": "high",
