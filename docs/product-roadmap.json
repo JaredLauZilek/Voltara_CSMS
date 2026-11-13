@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T11:46:27.953Z",
+  "updatedAt": "2026-11-13T12:06:32.157Z",
   "items": [
     {
       "id": "d5196b78",
@@ -311,10 +311,19 @@
     {
       "id": "df75e610",
       "title": "Multi-country on one backend (Malaysia + Singapore)",
-      "notes": "One CSMS and one app for every country, no second deployment. The site's country decides currency, tax, timezone and which Stripe account takes the money (one Stripe account per country). To build: a per-country set-up record per operator (currency, tax, payment account, invoice details); country picker on sites (the column exists, defaults to MY); SGD tariffs and GST; a country filter and per-currency totals on dashboards and reports (never add RM and S$ together); one company invoice per country; Singapore licensing. Decide before Payments (Phase 5) is built.",
+      "notes": "One CSMS and one app for every country. Done: each operator account has one country, fixed when Voltara creates it (cannot be changed); sites follow it; forms, phone codes, registration numbers (SSM/TIN/SST or UEN/GST) and the currency symbol follow it; local demo has a Singapore and a Malaysia operator. To build: one Stripe account per country, GST on Singapore invoices and InvoiceNow, LTA licensing and reporting, country shown per operator in a platform console, the driver app showing prices in the site's currency.",
       "area": "Compliance",
       "status": "next",
       "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "780b30b2",
+      "title": "Sub-operators: an operator's own customers",
+      "notes": "An operator can create sub-operator accounts for its customers (e.g. a condo or fleet managing its own chargers and whitelists). A sub-operator inherits the parent's country and cannot change it. Builds on operator accounts; whitelists and private sites are the first step.",
+      "area": "Platform",
+      "status": "later",
+      "priority": "medium",
       "doneAt": null
     },
     {

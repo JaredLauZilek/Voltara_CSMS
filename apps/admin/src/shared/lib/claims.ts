@@ -6,6 +6,8 @@
 export interface TokenClaims {
   tenant_id?: string;
   tenant_role?: 'owner' | 'admin' | 'operator' | 'viewer';
+  /** The operator's country (ISO alpha-2), fixed when the account was created. */
+  tenant_country?: string;
   platform_admin?: boolean;
 }
 

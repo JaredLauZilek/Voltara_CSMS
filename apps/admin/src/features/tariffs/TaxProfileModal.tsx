@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/app/auth';
 import { C, Modal } from '@voltara/ui';
 import { useUpsertTaxProfile } from './hooks';
 import type { TaxProfile } from './types';
@@ -36,9 +37,10 @@ export function TaxProfileModal({
   profile: TaxProfile | null;
   onClose: () => void;
 }) {
+  const { country } = useAuth();
   const upsert = useUpsertTaxProfile();
-  const [name, setName] = useState(profile?.name ?? 'SST');
-  const [code, setCode] = useState(profile?.code ?? 'SST');
+  const [name, setName] = useState(profile?.name ?? country.salesTaxCode);
+  const [code, setCode] = useState(profile?.code ?? country.salesTaxCode);
   const [rate, setRate] = useState(profile ? String(profile.rate_bps / 100) : '0');
   const [isDefault, setIsDefault] = useState(profile?.is_default ?? true);
   const rateBps = Math.round((Number(rate) || 0) * 100);
@@ -90,9 +92,11 @@ export function TaxProfileModal({
         </label>
       </div>
       <div style={{ fontSize: 11, color: C.slate, lineHeight: 1.6 }}>
-        SST on EV charging is unresolved in Malaysia. Keep 0% until the position is confirmed; when
-        it changes, only sessions started afterwards are affected, and every document keeps the rate
-        it was issued with.
+        {country.code === 'MY'
+          ? 'SST on EV charging is unresolved in Malaysia. Keep 0% until the position is confirmed.'
+          : 'GST applies once the operator is GST-registered. Keep 0% until then.'}{' '}
+        When the rate changes, only sessions started afterwards are affected, and every document
+        keeps the rate it was issued with.
       </div>
       {upsert.error && (
         <div
@@ -132,7 +136,7 @@ export function TaxProfileModal({
               {
                 ...(profile ? { id: profile.id } : {}),
                 name: name.trim(),
-                code: code.trim() || 'SST',
+                code: code.trim() || country.salesTaxCode,
                 rate_bps: rateBps,
                 is_default: isDefault,
               },

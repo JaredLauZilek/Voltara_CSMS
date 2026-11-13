@@ -16,8 +16,8 @@ insert into demo_drivers values
   ('aiman',  'aiman.rahman@example.com',  '60123450001', 'Aiman Rahman',   'kinta', 'KL-CARD-0001'),
   ('mei',    'mei.ling.tan@example.com',  '60123450002', 'Tan Mei Ling',   'kinta', 'KL-CARD-0002'),
   ('kumar',  'kumar.siva@example.com',    '60123450003', 'Kumar Sivalingam', 'kinta', null),
-  ('weijie', 'weijie.lim@example.com',    '6591230001',  'Lim Wei Jie',    'selat', 'SF-CARD-0001'),
-  ('nurul',  'nurul.huda@example.com',    '6591230002',  'Nurul Huda',     'selat', null),
+  ('farah',  'farah.aziz@example.com',    '60123450004', 'Farah Aziz',     'selat', 'SF-CARD-0001'),
+  ('jason',  'jason.lee@example.com',     '60123450005', 'Jason Lee',      'selat', null),
   ('daniel', 'daniel.wong@example.com',   '60123450006', 'Daniel Wong',    null,    null),
   ('priya',  'priya.nair@example.com',    '60123450007', 'Priya Nair',     null,    null);
 
@@ -48,7 +48,7 @@ insert into public.billing_accounts (
    'Kinta Logistics', 'Kinta Logistics Sdn Bhd', 'accounts@kintalogistics.example', '60355550100',
    'postpaid_invoice', 'drivers', 'Demo company. Any listed driver may charge on the company bill.'),
   (md5('demo-company:selat')::uuid, '11111111-1111-4111-8111-111111111111', 'corporate',
-   'Selat Fleet Services', 'Selat Fleet Services Pte Ltd', 'finance@selatfleet.example', '6562220100',
+   'Selat Fleet Services', 'Selat Fleet Services Sdn Bhd', 'finance@selatfleet.example', '60355550200',
    'postpaid_invoice', 'vehicles', 'Demo company. Set to company vehicles only.')
 on conflict (id) do nothing;
 
@@ -75,8 +75,8 @@ on conflict do nothing;
 -- One car already recognised by chargers (its identifier read at a charger,
 -- then consented to); the rest are listed but not enrolled.
 insert into public.id_tags (id, tenant_id, tag, label, kind, billing_account_id)
-values (md5('demo-tag:vehicle:SMX1234A')::uuid, '11111111-1111-4111-8111-111111111111',
-        'VID:8C1F64A1B2C3', 'SMX1234A', 'vehicle', md5('demo-company:selat')::uuid)
+values (md5('demo-tag:vehicle:WXY 1234')::uuid, '11111111-1111-4111-8111-111111111111',
+        'VID:8C1F64A1B2C3', 'WXY 1234', 'vehicle', md5('demo-company:selat')::uuid)
 on conflict do nothing;
 
 insert into public.vehicles (id, tenant_id, billing_account_id, plate, vin, label, id_tag_id, consent_at)
@@ -88,8 +88,8 @@ from (values
   ('kinta', 'VKL 2481', null,                'BYD Atto 3',       false),
   ('kinta', 'VKL 7730', null,                'BYD Dolphin',      false),
   ('kinta', 'BRA 1905', 'LGXCE4CB5R0123456', 'BYD Seal',         false),
-  ('selat', 'SMX1234A', 'LRW3F7EK4PC123456', 'Tesla Model 3',    true),
-  ('selat', 'SNB5678C', null,                'Hyundai Ioniq 5',  false)
+  ('selat', 'WXY 1234', 'LRW3F7EK4PC123456', 'Tesla Model 3',    true),
+  ('selat', 'JQB 5678', null,                'Hyundai Ioniq 5',  false)
 ) as v(company, plate, vin, label, enrolled)
 on conflict do nothing;
 
@@ -123,7 +123,7 @@ insert into public.driver_group_members (tenant_id, driver_group_id, driver_user
 select '11111111-1111-4111-8111-111111111111', g.id, md5('demo-driver:' || v.driver)::uuid
 from (values
   ('demo-whitelist:vantage', 'daniel'), ('demo-whitelist:vantage', 'priya'),
-  ('demo-whitelist:vantage', 'mei'), ('demo-whitelist:hq', 'nurul')
+  ('demo-whitelist:vantage', 'mei'), ('demo-whitelist:hq', 'jason')
 ) as v(key, driver)
 join public.driver_groups g on g.id = md5(v.key)::uuid
 on conflict do nothing;

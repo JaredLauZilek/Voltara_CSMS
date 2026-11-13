@@ -18,7 +18,7 @@ Local logins (seeded): `jared@voltara.com.my` / `voltara-dev` (Voltara owner, pl
 
 **Codespaces:** the browser runs on your machine, not in the container, so the admin app reaches
 local Supabase through the Vite dev-server proxy (`VITE_SUPABASE_URL=/supabase`) — only port 5173
-needs forwarding. `VITE_DEV_AUTO_LOGIN_EMAIL/_PASSWORD` in `.env.local` skip the login form in dev.
+needs forwarding. `VITE_DEV_AUTO_LOGIN_EMAIL/_PASSWORD` in `.env.local` skip the login form in dev. A second account (`_EMAIL_2/_PASSWORD_2`) adds a "Switch to …" link in the sidebar: locally the first login is the Singapore operator and `jaredmy@…` (password `123456`) the Malaysian one (`supabase/dev/demo-accounts.sql`).
 If `supabase start` dies at "Initialising schema", run `sudo iptables-legacy -P FORWARD ACCEPT` first
 (a stale legacy firewall table drops container-to-container traffic on fresh codespaces).
 

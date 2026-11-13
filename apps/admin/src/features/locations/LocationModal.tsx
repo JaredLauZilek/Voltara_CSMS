@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
 import { mapLinks } from '@voltara/shared';
+import { useAuth } from '@/app/auth';
 import { PlaceSearch } from './PlaceSearch';
 import { MY_STATES, SITE_TYPES, SITE_TYPE_LABELS } from './types';
 import type { Location, LocationInsert, SiteType } from './types';
@@ -42,6 +43,7 @@ const pinLink: React.CSSProperties = { color: C.green, fontWeight: 600, textDeco
 
 export function LocationModal({ location, onClose, onSave, onDelete, isSaving, saveError }: Props) {
   const isNew = !location;
+  const { country } = useAuth();
   const [form, setForm] = useState<FormRow>(() => {
     if (location) {
       // Strip server-managed fields so updates only carry editable columns.
@@ -52,7 +54,7 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
       name: '',
       address: null,
       city: null,
-      state: 'Selangor',
+      state: country.hasStates ? 'Selangor' : null,
       postcode: null,
       site_type: 'public',
       jmb_name: null,
@@ -173,44 +175,52 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
           />
         </div>
 
-        {/* State */}
-        <div>
-          <label style={labelStyle}>State</label>
-          <select
-            value={form.state ?? ''}
-            onChange={(e) => setForm((f) => ({ ...f, state: e.target.value || null }))}
-            style={inputStyle}
-          >
-            <option value="">— Select state —</option>
-            {MY_STATES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* State — only where the country has them */}
+        {country.hasStates && (
+          <div>
+            <label style={labelStyle}>State</label>
+            <select
+              value={form.state ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, state: e.target.value || null }))}
+              style={inputStyle}
+            >
+              <option value="">— Select state —</option>
+              {MY_STATES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Postcode */}
         <div>
-          <label style={labelStyle}>Postcode</label>
+          <label style={labelStyle}>{country.postcodeLabel}</label>
           <input
             value={form.postcode ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, postcode: e.target.value || null }))}
-            placeholder="e.g. 59000"
+            placeholder={`e.g. ${country.postcodePlaceholder}`}
             style={inputStyle}
           />
         </div>
 
         {/* JMB — licence prerequisite for condo sites */}
         <div>
-          <label style={labelStyle}>JMB / MC Name</label>
+          <label style={labelStyle}>{country.code === 'SG' ? 'MCST name' : 'JMB / MC Name'}</label>
           <input
             value={form.jmb_name ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, jmb_name: e.target.value || null }))}
-            placeholder={isCondo ? 'Joint Management Body' : '—'}
+            placeholder={
+              isCondo
+                ? country.code === 'SG'
+                  ? 'Management corporation'
+                  : 'Joint Management Body'
+                : '—'
+            }
             style={inputStyle}
           />
-          {isCondo && (
+          {isCondo && country.code === 'MY' && (
             <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
               JMB/MC consent is a prerequisite of the ST EVCS licence.
             </div>

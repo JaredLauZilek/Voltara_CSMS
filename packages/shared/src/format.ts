@@ -1,16 +1,20 @@
 // Formatting helpers shared by admin, driver app, and PDFs/receipts.
 // Ported from the accounting dashboard (en-GB dates, RM currency, middot separators).
 
+import { displayCurrencySymbol } from './countries';
+
+/** An amount in the signed-in operator's currency: "RM 1,500", "S$ 1,500". */
 export function formatRM(value: number, fractionDigits = 0): string {
-  return `RM ${value.toLocaleString(undefined, {
+  return `${displayCurrencySymbol()} ${value.toLocaleString(undefined, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   })}`;
 }
 
 export function formatRMShort(value: number): string {
-  if (value >= 1_000_000) return `RM ${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `RM ${(value / 1_000).toFixed(1)}k`;
+  const symbol = displayCurrencySymbol();
+  if (value >= 1_000_000) return `${symbol} ${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${symbol} ${(value / 1_000).toFixed(1)}k`;
   return formatRM(value);
 }
 
