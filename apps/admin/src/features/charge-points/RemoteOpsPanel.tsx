@@ -347,7 +347,7 @@ function RemoteOpModal({
             </select>
             {activeTags.length === 0 && (
               <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
-                No active ID tags. Add one under Operations → ID tags first.
+                No active ID tags yet. Add a card to a driver under Charging management first.
               </div>
             )}
           </div>

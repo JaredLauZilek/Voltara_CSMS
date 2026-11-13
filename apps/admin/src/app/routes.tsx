@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   BatteryCharging,
   Building2,
-  CreditCard,
   FileText,
   LayoutDashboard,
   MapPin,
@@ -87,8 +86,8 @@ export const ROUTES: RouteDef[] = [
   { path: '/id-tags', title: 'ID Tags', screen: IdTagsScreen },
   { path: '/ocpp-logs', title: 'OCPP Log', screen: OcppLogsScreen },
   { path: '/tariffs', title: 'Tariffs', screen: TariffsFeature },
-  { path: '/driver-groups', title: 'Driver groups', screen: DriverGroupsScreen },
-  { path: '/billing-accounts', title: 'Billing accounts', screen: BillingAccountsScreen },
+  { path: '/driver-groups', title: 'Whitelist', screen: DriverGroupsScreen },
+  { path: '/billing-accounts', title: 'Corporate charging', screen: BillingAccountsScreen },
   { path: '/cdrs', title: 'Charging records', screen: CdrsFeature },
   { path: '/documents', title: 'Documents', screen: DocumentsFeature },
   { path: '/reports', title: 'Reports', screen: ReportsScreen },
@@ -128,16 +127,24 @@ export const NAV_SECTIONS: NavSection[] = [
     label: 'Operations',
     items: [
       { path: '/issues', label: 'Issues', icon: AlertTriangle },
-      { path: '/id-tags', label: 'ID tags', icon: CreditCard },
       { path: '/ocpp-logs', label: 'OCPP log', icon: ScrollText },
+    ],
+  },
+  // Who may charge and who pays: companies billed monthly for their drivers,
+  // and whitelists for private chargers. RFID cards and VINs belong to a
+  // driver's account, so ID tags has no menu entry of its own (/id-tags stays
+  // reachable until Corporate charging manages them).
+  {
+    label: 'Charging management',
+    items: [
+      { path: '/billing-accounts', label: 'Corporate charging', icon: Building2 },
+      { path: '/driver-groups', label: 'Whitelist', icon: UsersRound },
     ],
   },
   {
     label: 'Billing',
     items: [
       { path: '/tariffs', label: 'Tariffs', icon: Tags },
-      { path: '/driver-groups', label: 'Driver groups', icon: UsersRound },
-      { path: '/billing-accounts', label: 'Billing accounts', icon: Building2 },
       { path: '/cdrs', label: 'Charging records', icon: Receipt },
       { path: '/documents', label: 'Documents', icon: FileText },
       { path: '/reports', label: 'Reports', icon: PieChart },
