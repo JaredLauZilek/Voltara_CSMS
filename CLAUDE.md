@@ -164,7 +164,8 @@ apps/admin/src/
 ## §13 Market notes — Malaysia first, Singapore next
 
 - Currency `MYR`, formatted `RM 1,500` / `RM 42.1k`. Dates en-GB, timezone `Asia/Kuala_Lumpur`.
-- **Singapore is a target market, not yet modelled** (no country on sites, SGD, or Singapore licensing). Keep new work from deepening the Malaysia-only assumption: a site may have no Malaysian state; addresses and domains stay country-neutral; currency and tax stay per-tenant data, never constants.
+- **One backend, many countries.** Voltara runs Malaysia and Singapore (more later) from this one CSMS and one driver app — never a second deployment per country. The **site's country** decides the currency, the tax, the timezone and **which payment account takes the money** (one Stripe account per country, per tenant: a country is a legal entity). A driver has one app account everywhere; a session is priced and charged in the currency of the site it happened at; a company charging in two countries gets one invoice per country.
+- **Singapore is not fully modelled yet** (sites carry a country; there is no per-country payment account, SGD tariff set-up, GST, or Singapore licensing). Keep new work from deepening the Malaysia-only assumption: a site may have no Malaysian state; addresses and domains stay country-neutral; currency, tax and payment account are per-tenant-per-country data, never constants; never add amounts across currencies.
 - **SST:** applicability to EV charging is unresolved. Tax is always a separate stored component with a configurable rate per tenant/tariff line — never hardcode 0% or 8%, and design for retroactive re-rating.
 - Three licensing jurisdictions by state: ST (peninsular), ECoS (Sabah/Labuan), Sarawak — `licensingJurisdiction()` in `@voltara/shared`. JMB/MC consent letters are ST licence prerequisites for condo sites. MEVnet/ST reporting exports are first-class features, not afterthoughts.
 
