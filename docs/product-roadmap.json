@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T10:15:12.869Z",
+  "updatedAt": "2026-11-13T10:24:21.717Z",
   "items": [
     {
       "id": "cf3d6a75",
@@ -16,9 +16,9 @@
       "title": "Merge PR #3",
       "notes": "Open-charger credentials fix, one-row status board, place search for locations, this roadmap board.",
       "area": "Platform",
-      "status": "now",
+      "status": "done",
       "priority": "high",
-      "doneAt": null
+      "doneAt": "2026-11-13"
     },
     {
       "id": "75910bf9",
