@@ -7,7 +7,9 @@ This file is loaded by every Claude Code session in this repo. Read it before ma
 We are prototyping and building the product, not operating it. Until a deliberate **pre-production review** (one pass before launch that re-enables and hardens what is parked here), optimise for speed and a small footprint:
 
 - **Keep the codespace lean and clean.** 32 GB disk. Install nothing the repo does not use; prefer caches that can be wiped; delete superseded tool versions, build outputs and stray artefacts as you go. Local Supabase runs without Studio and imgproxy (`supabase/config.toml`). Unused preinstalled toolchains (Java/sdkman, .NET, Conda, Go) have been removed — do not reinstall them.
-- **Production-grade extras are held back, not built now:** dev conveniences (auto sign-in, no login screen in dev) stay on; hardening, observability, deploy automation and polish beyond what a feature needs to be tried are deferred to the review. Note anything deferred in `docs/roadmap.md` so the review has a list.
+- **Production-grade extras are held back, not built now:** dev conveniences (auto sign-in, no login screen in dev) stay on; hardening, observability, deploy automation and polish beyond what a feature needs to be tried are deferred to the review. Note anything deferred on the roadmap board (`docs/product-roadmap.json`, §15) so the review has a list.
+- **Build against the demo fleet, not hardware.** Feature work assumes charger connections succeed: `pnpm dev` loads already-connected demo chargers with history (`supabase/dev/`). Real-charger testing is a separate activity on staging.
+- **Two environments.** Local (the codespace's own Supabase, demo data, `pnpm db:reset` at will) and staging (hosted Supabase + the Fly gateway, real chargers, changed only by merging to `main`). Never point a destructive command at staging.
 - **The locked contracts below still apply** (tenancy/RLS, brand tokens, architecture, OCPP rules). Lean means less tooling and less ceremony, never weaker tenant isolation or secrets in browser code.
 
 ## §1 Product & monorepo map
@@ -18,11 +20,17 @@ Voltara CSMS is a **dual-purpose** platform: it runs **Voltara's own** EV chargi
 | ------------------- | ----------------------------------------------------------------------------------------- |
 | `apps/admin`        | Operator/JMB admin portal (Vite + React SPA)                                              |
 | `apps/ocpp-gateway` | Always-on OCPP central system (Node 22, Fly.io `sin`) — see `apps/ocpp-gateway/CLAUDE.md` |
-| `apps/driver`       | Expo driver app (arrives Phase 4)                                                         |
+| `apps/driver`       | The charging app for drivers (Expo) — ships to the App Store and Google Play              |
 | `packages/ui`       | Voltara design system — see `packages/ui/CLAUDE.md`                                       |
 | `packages/shared`   | Generated DB types, domain enums, OCPP vocabulary, realtime contracts, pure helpers       |
 | `supabase/`         | Migrations (system of record = Supabase Postgres), seed, edge functions                   |
 | `tests/integration` | RLS isolation suite + simulator-driven OCPP scenarios                                     |
+
+**Where this is going (direction, not yet all built):**
+
+- **The driver app is the product drivers see.** `apps/driver` becomes the Voltara charging app in the App Store and Google Play: find a charger, navigate to it, start and stop a session, pay, see history. Design every driver-facing choice for a member of the public on a phone, not for an operator. Home charging joins this same app later (one app, not two — the parked Home app in `archive/`).
+- **Operators cannot sign up yet.** Today operators exist only as rows created with the service role: Voltara (tenant #1) and the demo tenant. Self-serve operator accounts — another CPO or JMB creating its own account, logging in, and managing only its own chargers — are **not built and deliberately deferred** (roadmap: Later). Until then, do not build sign-up, operator billing or tenant-switching flows; **do** keep every table, policy and screen tenant-generic (§5) so that work is additive when it comes.
+- **Markets: Malaysia first, Singapore next.** Nothing new may assume Malaysia-only where a neutral choice costs the same (see §13).
 
 `archive/` holds parked code kept for later (currently the earlier Voltara Home app) — not a workspace, not built or linted, never imported; see `archive/README.md`.
 
@@ -105,6 +113,7 @@ apps/admin/src/
 - **Every OCPP frame is persisted** to `ocpp_messages` (in and out), with `AuthorizationKey` values redacted before persist.
 - The internal domain model is **protocol-agnostic**: OCPP 1.6 wire shapes never leak past `apps/ocpp-gateway/src/ocpp/v16/`. OCPP 2.0.1 arrives later as a second adapter onto the same model.
 - Vendor quirks live ONLY in the quirks layer (keyed by boot-reported vendor/model), never inline in handlers.
+- **Chargers connect to `ocpp.voltaracharging.com`** (`wss://…/ocpp`; `:443` TLS, `:80` plaintext for profile 0/1) — never to a hosting provider's own hostname. Every charger stores this address, so it must outlive any change of hosting (`docs/deploy-gateway.md` §3a).
 - Admin→gateway commands travel exclusively through `remote_commands` + `pg_notify`; fan-out to UIs exclusively through Realtime Broadcast. See §8.
 - Protocol detail, state machines, and handler conventions: `apps/ocpp-gateway/CLAUDE.md`.
 
@@ -150,11 +159,12 @@ apps/admin/src/
 ## §12 White-label theming rules
 
 - Tenant theme = `tenant_settings.theme` jsonb of token overrides, validated against a schema (Phase 6). Components read theme via context; nothing imports tenant values directly.
-- The flagship driver app is the **Voltara-branded** store listing; white-label tenants join it via runtime branding, and only graduate to their own bundle IDs published from **their own** Apple/Google accounts (Apple Guideline 4.3(a)).
+- The flagship driver app is the **Voltara-branded** store listing, published from Voltara's own Apple and Google developer accounts; white-label tenants join it via runtime branding, and only graduate to their own bundle IDs published from **their own** Apple/Google accounts (Apple Guideline 4.3(a)).
 
-## §13 Malaysia domain notes
+## §13 Market notes — Malaysia first, Singapore next
 
 - Currency `MYR`, formatted `RM 1,500` / `RM 42.1k`. Dates en-GB, timezone `Asia/Kuala_Lumpur`.
+- **Singapore is a target market, not yet modelled** (no country on sites, SGD, or Singapore licensing). Keep new work from deepening the Malaysia-only assumption: a site may have no Malaysian state; addresses and domains stay country-neutral; currency and tax stay per-tenant data, never constants.
 - **SST:** applicability to EV charging is unresolved. Tax is always a separate stored component with a configurable rate per tenant/tariff line — never hardcode 0% or 8%, and design for retroactive re-rating.
 - Three licensing jurisdictions by state: ST (peninsular), ECoS (Sabah/Labuan), Sarawak — `licensingJurisdiction()` in `@voltara/shared`. JMB/MC consent letters are ST licence prerequisites for condo sites. MEVnet/ST reporting exports are first-class features, not afterthoughts.
 
@@ -174,13 +184,14 @@ apps/admin/src/
 
 ## §15 Common workflows
 
-| Task                    | Recipe                                                                                                                                                          |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Add a feature           | copy `apps/admin/src/features/locations/` → rename, gut, rebuild → add `ROUTES` + `NAV_SECTIONS` entries                                                        |
-| Add a column            | `supabase migration new` → `pnpm db:reset` → `pnpm gen:types` → feature `types.ts` → modal/screen                                                               |
-| Add an OCPP action      | vocabulary in `@voltara/shared/src/ocpp` → handler in gateway protocol module → frame log verified → integration scenario → gateway CLAUDE.md if a rule changed |
-| Register a vendor quirk | `charge_point_vendors.quirks` flag + quirks-layer hook + `charger_compat` issue link                                                                            |
-| Enable deploys          | repo var `DEPLOY_ENABLED=true` + staging environment secrets (docs/dev-setup.md)                                                                                |
+| Task                    | Recipe                                                                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add a feature           | copy `apps/admin/src/features/locations/` → rename, gut, rebuild → add `ROUTES` + `NAV_SECTIONS` entries                                                              |
+| Add a column            | `supabase migration new` → `pnpm db:reset` → `pnpm gen:types` → feature `types.ts` → modal/screen                                                                     |
+| Add an OCPP action      | vocabulary in `@voltara/shared/src/ocpp` → handler in gateway protocol module → frame log verified → integration scenario → gateway CLAUDE.md if a rule changed       |
+| Register a vendor quirk | `charge_point_vendors.quirks` flag + quirks-layer hook + `charger_compat` issue link                                                                                  |
+| Deploy to staging       | merge to `main`: `migrate` pushes migrations, `deploy-gateway` redeploys Fly (repo var `DEPLOY_ENABLED`, `staging` environment secrets — docs/dev-setup.md)           |
+| Track work              | the roadmap board — `docs/product-roadmap.json`, edited at admin **Dev → Roadmap** (Now / Next / Later / Done). Move items to Done as they ship; park new ideas there |
 
 ## §16 Growth policy — how this file evolves
 

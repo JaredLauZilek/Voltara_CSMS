@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T00:00:00.000Z",
+  "updatedAt": "2026-11-13T10:15:12.869Z",
   "items": [
     {
       "id": "cf3d6a75",
@@ -194,7 +194,7 @@
     {
       "id": "1dd3c594",
       "title": "White-label and onboarding (Phase 6)",
-      "notes": "Tenant self-serve onboarding, theme provider, tenant switcher, platform-admin console, production project.",
+      "notes": "Theme provider, tenant switcher, platform-admin console, production project. Operator sign-up is its own item.",
       "area": "White-label",
       "status": "later",
       "priority": "medium",
@@ -496,6 +496,24 @@
       "status": "done",
       "priority": "medium",
       "doneAt": "2026-11-13"
+    },
+    {
+      "id": "719ca894",
+      "title": "Operator accounts: other companies sign up and log in",
+      "notes": "KIV. A CPO or JMB creates its own operator account, logs in with its own users, and manages only its own chargers. Today operators exist only as rows created by Voltara (tenant #1 and the demo tenant). Includes sign-up, inviting staff, and choosing a plan.",
+      "area": "White-label",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "710745ae",
+      "title": "Publish the charging app to the App Store and Google Play",
+      "notes": "The driver app becomes the Voltara charging app for the public: Apple and Google developer accounts, store listings, EAS build and submit, review. After the driver app MVP.",
+      "area": "Driver app",
+      "status": "later",
+      "priority": "high",
+      "doneAt": null
     }
   ]
 }
