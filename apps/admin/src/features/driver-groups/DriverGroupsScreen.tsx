@@ -24,7 +24,7 @@ export function DriverGroupsScreen() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
         <KPICard
-          label="Driver groups"
+          label="Whitelists"
           value={groups.length}
           sub="Whitelists with their own pricing"
           accent

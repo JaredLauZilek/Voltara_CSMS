@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Badge, C, Modal } from '@voltara/ui';
+import { AddDriverBox, driverName, useDrivers, type Driver } from '@/features/drivers';
+import { useLocations } from '@/features/locations';
+import { C, Modal } from '@voltara/ui';
 import { useBillingAccounts } from '@/features/billing-accounts';
 import { useIdTags } from '@/features/id-tags';
 import {
   useAddMember,
   useCreateGroup,
   useDeleteGroup,
+  useGroupLocationIds,
   useGroupMembers,
+  useSetGroupLocation,
   useRemoveMember,
   useUpdateGroup,
 } from './hooks';
@@ -49,6 +53,7 @@ export function DriverGroupModal({
   const [name, setName] = useState(group?.name ?? '');
   const [kind, setKind] = useState(group?.kind ?? 'residents');
   const [description, setDescription] = useState(group?.description ?? '');
+  const [discount, setDiscount] = useState(String((group?.discount_bps ?? 0) / 100));
   const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => {
     createMut.reset();
@@ -60,14 +65,20 @@ export function DriverGroupModal({
   const error = createMut.error ?? updateMut.error ?? deleteMut.error;
 
   const save = () => {
-    const row = { name: name.trim(), kind, description: description.trim() || null };
+    const pct = Math.min(100, Math.max(0, Number(discount) || 0));
+    const row = {
+      name: name.trim(),
+      kind,
+      description: description.trim() || null,
+      discount_bps: Math.round(pct * 100),
+    };
     if (isNew) createMut.mutate(row, { onSuccess: onClose });
     else updateMut.mutate({ id: group.id, patch: row }, { onSuccess: onClose });
   };
 
   return (
     <Modal
-      title={isNew ? 'New driver group' : group.name}
+      title={isNew ? 'New whitelist' : group.name}
       subtitle={
         isNew
           ? 'A whitelist that can carry its own tariff'
@@ -106,9 +117,34 @@ export function DriverGroupModal({
             style={inputStyle}
           />
         </div>
+        <div style={{ gridColumn: '1/-1' }}>
+          <label style={labelStyle}>Discount on energy price (%)</label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            step="any"
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+            style={{ ...inputStyle, width: 140 }}
+          />
+          <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
+            Applies to members at the sites ticked below. 100 means they charge free. Idle and
+            parking fees are not discounted.
+          </div>
+        </div>
       </div>
 
-      {!isNew && <Members groupId={group.id} />}
+      {isNew ? (
+        <div style={{ fontSize: 12, color: C.slate }}>
+          Create the whitelist first, then choose its sites and add drivers.
+        </div>
+      ) : (
+        <>
+          <Sites groupId={group.id} />
+          <Members groupId={group.id} />
+        </>
+      )}
 
       {error && (
         <div
@@ -229,26 +265,35 @@ function Members({ groupId }: { groupId: string }) {
   const { data: accounts = [] } = useBillingAccounts();
   const add = useAddMember(groupId);
   const remove = useRemoveMember();
-  const [mode, setMode] = useState<'tag' | 'account'>('tag');
+  const { data: drivers = [] } = useDrivers();
+  const [mode, setMode] = useState<'driver' | 'tag' | 'account'>('driver');
   const [pick, setPick] = useState('');
   const usedTags = new Set(members.map((m) => m.id_tag_id));
   const usedAccounts = new Set(members.map((m) => m.billing_account_id));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <label style={labelStyle}>Members</label>
+      <label style={labelStyle}>Who is on it</label>
       <div style={{ display: 'flex', gap: 8 }}>
         <select
           value={mode}
           onChange={(e) => {
-            setMode(e.target.value as 'tag' | 'account');
+            setMode(e.target.value as 'driver' | 'tag' | 'account');
             setPick('');
           }}
-          style={{ ...inputStyle, width: 150 }}
+          style={{ ...inputStyle, width: 150, flexShrink: 0 }}
         >
-          <option value="tag">ID tag</option>
-          <option value="account">Billing account</option>
+          <option value="driver">Driver</option>
+          <option value="account">Whole company</option>
+          <option value="tag">RFID card</option>
         </select>
+        {mode === 'driver' && (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <AddDriverBox driverGroupId={groupId} />
+          </div>
+        )}
+      </div>
+      <div style={{ display: mode === 'driver' ? 'none' : 'flex', gap: 8 }}>
         <select value={pick} onChange={(e) => setPick(e.target.value)} style={inputStyle}>
           <option value="">— Choose —</option>
           {mode === 'tag'
@@ -298,7 +343,7 @@ function Members({ groupId }: { groupId: string }) {
       <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
         {members.length === 0 ? (
           <div style={{ padding: 20, textAlign: 'center', color: C.slate, fontSize: 13 }}>
-            No members yet.
+            Nobody yet. Add a driver by email or phone number.
           </div>
         ) : (
           members.map((m) => (
@@ -313,10 +358,9 @@ function Members({ groupId }: { groupId: string }) {
                 fontSize: 13,
               }}
             >
-              <Badge
-                status={m.id_tag_id ? 'Active' : 'Charging'}
-                override={m.id_tag_id ? undefined : { bg: C.infoBg, color: C.info }}
-              />
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.slate, width: 64 }}>
+                {m.driver_user_id ? 'DRIVER' : m.id_tag_id ? 'CARD' : 'COMPANY'}
+              </span>
               <span
                 style={{
                   fontWeight: 600,
@@ -325,7 +369,11 @@ function Members({ groupId }: { groupId: string }) {
                   fontSize: m.id_tag_id ? 12 : 13,
                 }}
               >
-                {m.id_tag_id ? m.tag : m.account_name}
+                {m.driver_user_id
+                  ? driverLabel(drivers.find((d) => d.user_id === m.driver_user_id))
+                  : m.id_tag_id
+                    ? m.tag
+                    : m.account_name}
               </span>
               {m.tag_label && <span style={{ color: C.slate }}>{m.tag_label}</span>}
               <button
@@ -346,6 +394,58 @@ function Members({ groupId }: { groupId: string }) {
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+const driverLabel = (d: Driver | undefined) =>
+  d ? [driverName(d), d.display_name ? d.email : null].filter(Boolean).join(' · ') : 'Driver';
+
+/** The sites this whitelist covers. Ticking a private site is what lets its members in. */
+function Sites({ groupId }: { groupId: string }) {
+  const { data: locations = [] } = useLocations();
+  const { data: covered = [] } = useGroupLocationIds(groupId);
+  const set = useSetGroupLocation(groupId);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label style={labelStyle}>Sites it covers</label>
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden' }}>
+        {locations.length === 0 && (
+          <div style={{ padding: 20, textAlign: 'center', color: C.slate, fontSize: 13 }}>
+            No sites yet.
+          </div>
+        )}
+        {locations.map((l) => (
+          <label
+            key={l.id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '9px 12px',
+              borderBottom: `1px solid ${C.divider}`,
+              fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={covered.includes(l.id)}
+              disabled={set.isPending}
+              onChange={(e) => set.mutate({ locationId: l.id, covered: e.target.checked })}
+              style={{ accentColor: C.green }}
+            />
+            <span style={{ fontWeight: 600, color: C.ink }}>{l.name}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: C.slate }}>
+              {l.is_private ? 'Private · whitelist only' : 'Public'}
+            </span>
+          </label>
+        ))}
+      </div>
+      {set.error && (
+        <div style={{ fontSize: 12, color: C.error }}>{(set.error as Error).message}</div>
+      )}
     </div>
   );
 }

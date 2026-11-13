@@ -1,5 +1,7 @@
-// The ONLY place `supabase.from('billing_accounts' | 'site_host_agreements')` may appear.
+// The ONLY place `supabase.from('billing_accounts' | 'site_host_agreements' | 'vehicles')`
+// may appear.
 import { supabase } from '@/shared/lib/supabase';
+import type { Database } from '@voltara/shared/database.types';
 import type {
   AgreementWithLocation,
   BillingAccount,
@@ -73,5 +75,36 @@ export async function upsertAgreement(
 
 export async function deleteAgreement(id: string): Promise<void> {
   const { error } = await supabase.from('site_host_agreements').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export type Vehicle = Database['public']['Tables']['vehicles']['Row'];
+
+export async function listVehicles(accountId: string): Promise<Vehicle[]> {
+  const { data, error } = await supabase
+    .from('vehicles')
+    .select('*')
+    .eq('billing_account_id', accountId)
+    .order('plate');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addVehicle(row: {
+  tenant_id: string;
+  billing_account_id: string;
+  plate: string;
+  vin: string | null;
+  label: string | null;
+}): Promise<void> {
+  const { error } = await supabase.from('vehicles').insert(row);
+  if (error) {
+    if (error.code === '23505') throw new Error('That plate number is already registered.');
+    throw error;
+  }
+}
+
+export async function deleteVehicle(id: string): Promise<void> {
+  const { error } = await supabase.from('vehicles').delete().eq('id', id);
   if (error) throw error;
 }

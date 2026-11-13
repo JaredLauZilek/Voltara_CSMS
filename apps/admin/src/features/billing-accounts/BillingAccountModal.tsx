@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CompanyCharging } from './CompanyCharging';
 import { C, Modal } from '@voltara/ui';
 import { billing, formatDate } from '@voltara/shared';
 import { useLocations } from '@/features/locations';
@@ -77,6 +78,7 @@ export function BillingAccountModal({
           location_id: account.location_id,
           status: account.status,
           notes: account.notes,
+          charging_rule: account.charging_rule,
         }
       : {
           kind: 'individual',
@@ -137,7 +139,7 @@ export function BillingAccountModal({
 
   return (
     <Modal
-      title={isNew ? 'New billing account' : account.name}
+      title={isNew ? 'New account' : account.name}
       subtitle={
         isNew
           ? 'Who gets billed'
@@ -308,6 +310,18 @@ export function BillingAccountModal({
       </div>
 
       {!isNew && account.kind === 'site_host' && <Agreements account={account} />}
+      {isNew && form.kind === 'corporate' && (
+        <div style={{ fontSize: 12, color: C.slate }}>
+          Save the company first, then open it to add its drivers and vehicles.
+        </div>
+      )}
+      {!isNew && account.kind === 'corporate' && (
+        <CompanyCharging
+          accountId={account.id}
+          rule={form.charging_rule ?? 'drivers'}
+          onRule={(r) => set('charging_rule', r)}
+        />
+      )}
 
       {error && (
         <div

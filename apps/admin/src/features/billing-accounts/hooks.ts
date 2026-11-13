@@ -66,3 +66,25 @@ export function useDeleteAgreement() {
     onSuccess: invalidate,
   });
 }
+
+export function useVehicles(accountId: string) {
+  return useQuery({
+    queryKey: ['billing-accounts', 'vehicles', accountId],
+    queryFn: () => api.listVehicles(accountId),
+  });
+}
+
+export function useAddVehicle(accountId: string) {
+  const { tenantId } = useAuth();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { plate: string; vin: string | null; label: string | null }) =>
+      api.addVehicle({ tenant_id: tenantId, billing_account_id: accountId, ...v }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteVehicle() {
+  const invalidate = useInvalidate();
+  return useMutation({ mutationFn: (id: string) => api.deleteVehicle(id), onSuccess: invalidate });
+}

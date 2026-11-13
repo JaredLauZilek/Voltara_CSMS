@@ -14,6 +14,7 @@ export function useCreateIdTag() {
     mutationFn: (row: IdTagInsert) => api.createIdTag(row),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['drivers'] });
     },
   });
 }
@@ -34,6 +35,19 @@ export function useDeleteIdTag() {
     mutationFn: (id: string) => api.deleteIdTag(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEY });
+      qc.invalidateQueries({ queryKey: ['drivers'] });
+    },
+  });
+}
+
+export function useUnassignDriver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (driverUserId: string) => api.unassignDriver(driverUserId),
+    onSuccess: () => {
+      for (const key of [KEY, ['drivers'], ['billing-accounts']]) {
+        void qc.invalidateQueries({ queryKey: key });
+      }
     },
   });
 }
