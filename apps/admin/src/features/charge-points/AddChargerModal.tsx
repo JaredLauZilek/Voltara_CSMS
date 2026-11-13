@@ -11,8 +11,7 @@ import {
 } from './types';
 
 const GATEWAY_URL =
-  (import.meta.env.VITE_GATEWAY_URL as string | undefined) ??
-  'wss://voltara-gateway-staging.fly.dev';
+  (import.meta.env.VITE_GATEWAY_URL as string | undefined) ?? 'wss://ocpp.voltaracharging.com';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',

@@ -211,5 +211,5 @@ Pino JSON logs (bound `cp`/`tenant`/`action`) → Fly logs; Sentry (gateway + ad
 2. Malaysian tax opinion on SST applicability + BNM aggregator exposure — required before Phase 5 go-live.
 3. Ask Curlec about sub-merchant/split settlement under their acquiring licence (would improve on Option A).
 4. Which CSMS incumbents power local CPOs (check WSS hostnames/TLS certs on deployed chargers) — competitive intel.
-5. Domain: `gateway.voltara.my` (or similar) DNS + Fly cert before first external charger.
+5. ~~Domain for the charger gateway~~ — done 13 Nov 2026: `ocpp.voltaracharging.com` → Fly (`docs/deploy-gateway.md` §3a).
 6. **Production charger catalogue** (pre-production review): brands/models exist only as dev data (`supabase/dev/demo-fleet.sql`). Curate the real list — models actually deployed in Malaysia, per-variant power and gun layout — and load it service-role before the first tenant registers chargers.

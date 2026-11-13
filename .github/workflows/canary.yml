@@ -32,7 +32,7 @@ jobs:
       - name: Run one session and verify its CDR
         run: pnpm sim:session --check --kwh 7.4 --minutes 30 --idle-min 5 ${{ vars.CANARY_EXPECT_SEN && format('--expect-sen {0}', vars.CANARY_EXPECT_SEN) || '' }}
         env:
-          CANARY_GATEWAY_URL: ${{ vars.CANARY_GATEWAY_URL || 'wss://voltara-gateway-staging.fly.dev' }}
+          CANARY_GATEWAY_URL: ${{ vars.CANARY_GATEWAY_URL || 'wss://ocpp.voltaracharging.com' }}
           CANARY_IDENTITY: ${{ secrets.CANARY_IDENTITY }}
           CANARY_KEY: ${{ secrets.CANARY_KEY }}
           CANARY_TAG: ${{ vars.CANARY_TAG || 'VLT-CANARY-TAG' }}

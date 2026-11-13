@@ -53,13 +53,30 @@ flyctl deploy -c infra/fly.staging.toml --remote-only
 Verify:
 
 ```bash
-curl https://voltara-gateway-staging.fly.dev/healthz
-curl https://voltara-gateway-staging.fly.dev/statusz     # connections: 0, realtime: true
+curl https://ocpp.voltaracharging.com/healthz
+curl https://ocpp.voltaracharging.com/statusz     # connections: 0, realtime: true
 flyctl logs -a voltara-gateway-staging
 ```
 
 `statusz` reporting `"realtime": true` confirms the broadcast credentials
 landed; `"connections"` is how many chargers are currently attached.
+
+## 3a. The charger address: `ocpp.voltaracharging.com`
+
+Chargers never use the `*.fly.dev` name: every unit stores its server address,
+and an address on our own domain lets the hosting move (or staging give way to
+production) by changing one DNS record instead of revisiting every charger.
+`voltaracharging.com` is a neutral `.com` so the same address serves Malaysia
+and Singapore.
+
+- DNS (GoDaddy, the domain's DNS host): `ocpp` CNAME `voltara-gateway-staging.fly.dev`.
+- Certificate: `flyctl certs add ocpp.voltaracharging.com -a voltara-gateway-staging`
+  (Let's Encrypt; Fly renews it). `flyctl certs check …` shows its state.
+- Port 80 stays open alongside 443 (`force_https = false`) for chargers on
+  profile 0 or 1 whose firmware cannot do TLS.
+
+Keep the domain on auto-renew with two-factor login on the registrar: if it
+lapses, every charger loses its server.
 
 ## 4. Register the charger
 
@@ -68,7 +85,7 @@ pnpm register:charger \
   --name "Bench Unit" \
   --identity VLT-BENCH-001 \
   --connectors 1 --max-kw 7.4 \
-  --url wss://voltara-gateway-staging.fly.dev
+  --url wss://ocpp.voltaracharging.com
 ```
 
 Run it with `DATABASE_URL` pointing at **staging** (the same session-pooler
@@ -93,16 +110,16 @@ scheme: leave `:80` / `:443` out and they dial the wrong port and the gateway
 never sees them. The admin's credentials step shows both forms for every
 registered charger.
 
-| Setting                                  | Value                                                      |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| OCPP version                             | 1.6J (JSON over WebSocket)                                 |
-| Server URL — spec-style firmware         | `wss://voltara-gateway-staging.fly.dev/ocpp`               |
-| Server URL — host:port dialect, TLS ON   | `voltara-gateway-staging.fly.dev:443/ocpp`                 |
-| Server URL — host:port dialect, TLS OFF  | `voltara-gateway-staging.fly.dev:80/ocpp` (profile 0 or 1) |
-| Charge Point ID / Identity               | the identity you registered, e.g. `VLT-BENCH-001`          |
-| Basic Auth username                      | the same identity (profiles 1 and 2; ignored at 0)         |
-| Basic Auth password / `AuthorizationKey` | the printed key (profiles 1 and 2; ignored at 0)           |
-| Security profile                         | 2 by default; 1 = Basic Auth without TLS; 0 = ID only      |
+| Setting                                  | Value                                                 |
+| ---------------------------------------- | ----------------------------------------------------- |
+| OCPP version                             | 1.6J (JSON over WebSocket)                            |
+| Server URL — spec-style firmware         | `wss://ocpp.voltaracharging.com/ocpp`                 |
+| Server URL — host:port dialect, TLS ON   | `ocpp.voltaracharging.com:443/ocpp`                   |
+| Server URL — host:port dialect, TLS OFF  | `ocpp.voltaracharging.com:80/ocpp` (profile 0 or 1)   |
+| Charge Point ID / Identity               | the identity you registered, e.g. `VLT-BENCH-001`     |
+| Basic Auth username                      | the same identity (profiles 1 and 2; ignored at 0)    |
+| Basic Auth password / `AuthorizationKey` | the printed key (profiles 1 and 2; ignored at 0)      |
+| Security profile                         | 2 by default; 1 = Basic Auth without TLS; 0 = ID only |
 
 Some firmware wants the identity appended to the URL instead of a separate
 field: `…/ocpp/VLT-BENCH-001`. The security profile is a property of the

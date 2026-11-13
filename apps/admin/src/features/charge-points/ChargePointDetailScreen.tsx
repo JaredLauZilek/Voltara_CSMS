@@ -20,8 +20,7 @@ import { DETAIL_TABS, DETAIL_TAB_LABELS, displayStatus, gatewayDisplayHost } fro
 import type { DetailTab } from './types';
 
 const GATEWAY_URL =
-  (import.meta.env.VITE_GATEWAY_URL as string | undefined) ??
-  'wss://voltara-gateway-staging.fly.dev';
+  (import.meta.env.VITE_GATEWAY_URL as string | undefined) ?? 'wss://ocpp.voltaracharging.com';
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 11,
