@@ -239,6 +239,65 @@ describe('issues (operator-writable ticket table)', () => {
   });
 });
 
+describe('sessions report (admin_list_sessions)', () => {
+  const CP_A = '66666666-6666-4666-8666-666666666661';
+  const TXN = 987_001;
+
+  // One tenant A session started with a tag that belongs to an app account.
+  async function withSession<T>(run: () => Promise<T>): Promise<T> {
+    const [tag] = await sql<{ id: string }[]>`
+      insert into public.id_tags (tenant_id, tag, kind, driver_user_id)
+      values (${TENANT_A}, 'RLS-REPORT-TAG', 'virtual', ${USER_B})
+      returning id
+    `;
+    await sql`
+      insert into public.charging_sessions
+        (tenant_id, charge_point_id, ocpp_connector_id, ocpp_transaction_id, id_tag, id_tag_id,
+         status, started_at)
+      values (${TENANT_A}, ${CP_A}, 1, ${TXN}, 'RLS-REPORT-TAG', ${tag.id}, 'active', now())
+    `;
+    try {
+      return await run();
+    } finally {
+      await sql`delete from public.charging_sessions where ocpp_transaction_id = ${TXN}`;
+      await sql`delete from public.id_tags where tag = 'RLS-REPORT-TAG'`;
+    }
+  }
+
+  const report = (tx: Parameters<Parameters<typeof as>[1]>[0]) =>
+    tx`select * from public.admin_list_sessions() where ocpp_transaction_id = ${TXN}`;
+
+  it('shows an operator its own sessions, with the driver email', async () => {
+    await withSession(async () => {
+      const rows = await as(personaA('operator'), report);
+      expect(rows.length).toBe(1);
+      expect(typeof rows[0].driver_email).toBe('string');
+      expect(rows[0].charge_point_identity).toBe('VCP-DEMO-001');
+    });
+  });
+
+  it('hides driver contact details from a viewer', async () => {
+    await withSession(async () => {
+      const rows = await as(personaA('viewer'), report);
+      expect(rows.length).toBe(1);
+      expect(rows[0].driver_email).toBeNull();
+      expect(rows[0].driver_phone).toBeNull();
+    });
+  });
+
+  it('never shows another operator the session', async () => {
+    await withSession(async () => {
+      expect((await as(personaB, report)).length).toBe(0);
+    });
+  });
+
+  it('is closed to anonymous callers', async () => {
+    await expect(
+      as({ role: 'anon' }, (tx) => tx`select * from public.admin_list_sessions()`),
+    ).rejects.toThrow(/permission denied/);
+  });
+});
+
 describe('team management RPCs', () => {
   it('list_team_members returns only the caller tenant, with emails', async () => {
     const rows = await as(personaA(), (tx) => tx`select * from public.list_team_members()`);

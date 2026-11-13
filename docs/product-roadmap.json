@@ -1,7 +1,16 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T12:14:20.720Z",
+  "updatedAt": "2026-11-13T12:33:35.307Z",
   "items": [
+    {
+      "id": "5262d3c6",
+      "title": "Sessions list: full details, filters and CSV download",
+      "notes": "Sessions now show vehicle no., driver, site and lot, charger, gun, AC/DC, start, end, duration, energy, amount, discount, final amount, billing type and payment status. Filter by site, charger and date range; search by vehicle no., driver email, tag or charger; download the view as CSV. Payment status reads Pending for pay-per-use until card payments are built.",
+      "area": "Sessions & logs",
+      "status": "done",
+      "priority": "high",
+      "doneAt": "2026-11-13"
+    },
     {
       "id": "d5196b78",
       "title": "Vehicle recognition (Autocharge)",
@@ -16,18 +25,18 @@
       "title": "Whitelist: private chargers and discounts",
       "notes": "Built end to end on the operator side: private sites (hidden from the map except for whitelisted drivers and refused at the charger for everyone else), whitelists covering chosen sites with drivers added by email or phone number, and a discount on the energy price (100% = free energy; any session, time or idle fee in the tariff still applies). Left: see it in the driver app and check the screens in a browser.",
       "area": "Billing",
-      "status": "now",
+      "status": "done",
       "priority": "high",
-      "doneAt": null
+      "doneAt": "2026-11-13"
     },
     {
       "id": "46bdf0fe",
       "title": "Corporate charging: companies and their driver accounts",
       "notes": "Admin and database built: a company has drivers (app accounts added by email or phone number, each with optional RFID cards), vehicles (plate, model, VIN for reference) and a rule for who may charge on its bill. Still to do: the gateway enforcing the vehicle rules.",
       "area": "Billing",
-      "status": "now",
+      "status": "done",
       "priority": "high",
-      "doneAt": null
+      "doneAt": "2026-11-13"
     },
     {
       "id": "c94348d0",

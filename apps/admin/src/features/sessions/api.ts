@@ -1,7 +1,12 @@
 // The ONLY place `supabase.from('charging_sessions' | 'meter_values_agg_1m')` may appear.
 import { supabase } from '@/shared/lib/supabase';
 import { OPEN_STATUSES } from './types';
-import type { ChargingSession, MeterMinute, SessionWithChargePoint } from './types';
+import type {
+  ChargingSession,
+  MeterMinute,
+  SessionReportRow,
+  SessionWithChargePoint,
+} from './types';
 
 const SELECT = '*, charge_points(ocpp_identity)';
 
@@ -89,4 +94,33 @@ export async function listTodayAndOpenSessions(): Promise<SessionWithChargePoint
     .limit(200);
   if (error) throw error;
   return (data ?? []).map((r) => flatten(r as Parameters<typeof flatten>[0]));
+}
+
+export interface SessionReportFilters {
+  locationId?: string | null;
+  chargePointId?: string | null;
+  /** ISO date (YYYY-MM-DD), inclusive, local day. */
+  from?: string | null;
+  to?: string | null;
+}
+
+/** Most rows one view loads; the screen says so when a view reaches it. */
+export const SESSION_REPORT_LIMIT = 2000;
+
+/** Sessions with site, driver, vehicle and payer joined — the list and its CSV. */
+export async function listSessionReport(
+  filters: SessionReportFilters = {},
+): Promise<SessionReportRow[]> {
+  const dayStart = (iso: string) => new Date(`${iso}T00:00:00`);
+  const { data, error } = await supabase.rpc('admin_list_sessions', {
+    p_location_id: filters.locationId ?? undefined,
+    p_charge_point_id: filters.chargePointId ?? undefined,
+    p_from: filters.from ? dayStart(filters.from).toISOString() : undefined,
+    p_to: filters.to
+      ? new Date(dayStart(filters.to).getTime() + 86_400_000).toISOString()
+      : undefined,
+    p_limit: SESSION_REPORT_LIMIT,
+  });
+  if (error) throw error;
+  return data ?? [];
 }

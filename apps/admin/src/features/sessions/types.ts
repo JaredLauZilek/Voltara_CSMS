@@ -24,3 +24,41 @@ export const SESSION_BADGE: Record<string, string> = {
 };
 
 export const OPEN_STATUSES = ['pending', 'active', 'suspended', 'finishing'];
+
+/** One row of the sessions report: a session with its site, driver, vehicle and payer. */
+export type SessionReportRow =
+  Database['public']['Functions']['admin_list_sessions']['Returns'][number];
+
+/** DC connectors; everything else is AC. */
+const DC_CONNECTORS = ['CCS2', 'CCS1', 'CHAdeMO', 'GBT_DC'];
+export function currentType(connectorType: string | null): 'AC' | 'DC' | null {
+  if (!connectorType) return null;
+  return DC_CONNECTORS.includes(connectorType) ? 'DC' : 'AC';
+}
+
+/** How the session is paid for, as an operator would say it. */
+export function billingType(s: SessionReportRow): string {
+  if (s.billing_account_kind === 'corporate') return 'Corporate';
+  if (s.driver_group_id) return 'Whitelist';
+  return 'Pay-per-use';
+}
+
+/** Where the money stands. Card payments are not live yet, so nothing reads "Paid". */
+export function paymentStatus(s: SessionReportRow): string {
+  if (s.ended_at === null) return 'Charging';
+  if (s.amount_gross === null) return 'Not priced';
+  if (Number(s.amount_gross) === 0) return 'Free';
+  if (s.billing_account_kind === 'corporate') return 'Monthly invoice';
+  return 'Pending';
+}
+
+export function sessionMinutes(s: SessionReportRow, now = Date.now()): number {
+  const end = s.ended_at ? new Date(s.ended_at).getTime() : now;
+  return Math.max(0, (end - new Date(s.started_at).getTime()) / 60_000);
+}
+
+/** List price before any whitelist discount. */
+export function listAmount(s: SessionReportRow): number | null {
+  if (s.amount_gross === null) return null;
+  return Number(s.amount_gross) + Number(s.amount_discount ?? 0);
+}
