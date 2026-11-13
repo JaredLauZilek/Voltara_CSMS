@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { C, Modal } from '@voltara/ui';
+import { mapLinks } from '@voltara/shared';
+import { PlaceSearch } from './PlaceSearch';
 import { MY_STATES, SITE_TYPES, SITE_TYPE_LABELS } from './types';
 import type { Location, LocationInsert, SiteType } from './types';
 
@@ -36,6 +38,8 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 6,
 };
 
+const pinLink: React.CSSProperties = { color: C.green, fontWeight: 600, textDecoration: 'none' };
+
 export function LocationModal({ location, onClose, onSave, onDelete, isSaving, saveError }: Props) {
   const isNew = !location;
   const [form, setForm] = useState<FormRow>(() => {
@@ -60,6 +64,7 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
   const [nameError, setNameError] = useState('');
 
   const isCondo = form.site_type === 'condo';
+  const links = mapLinks(form.lat, form.lng);
 
   const handleSave = () => {
     if (!form.name?.trim()) {
@@ -103,6 +108,28 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Fills the address and pin below; everything stays editable. The site
+          name is only filled when still empty. */}
+      <div>
+        <label style={labelStyle}>Find place</label>
+        <PlaceSearch
+          onPick={(place) =>
+            setForm((f) => ({
+              ...f,
+              name: f.name?.trim() ? f.name : place.name,
+              address: place.address ?? f.address,
+              city: place.city ?? f.city,
+              // A Singapore site must not keep a Malaysian state.
+              state: place.inMalaysia ? (place.state ?? f.state) : null,
+              postcode: place.postcode ?? f.postcode,
+              lat: place.lat,
+              lng: place.lng,
+            }))
+          }
+          onCoordinates={(lat, lng) => setForm((f) => ({ ...f, lat, lng }))}
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -215,6 +242,22 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
             placeholder="101.6790"
             style={inputStyle}
           />
+        </div>
+        <div style={{ gridColumn: '1/-1', fontSize: 12, color: C.slate }}>
+          {links ? (
+            <>
+              Check the pin — drivers get these same links:{' '}
+              <a href={links.googleMaps} target="_blank" rel="noreferrer" style={pinLink}>
+                Google Maps ›
+              </a>{' '}
+              ·{' '}
+              <a href={links.waze} target="_blank" rel="noreferrer" style={pinLink}>
+                Waze ›
+              </a>
+            </>
+          ) : (
+            'No pin yet. Drivers need one to navigate here with Google Maps or Waze.'
+          )}
         </div>
       </div>
 

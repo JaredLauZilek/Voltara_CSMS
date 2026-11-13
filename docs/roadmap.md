@@ -213,3 +213,4 @@ Pino JSON logs (bound `cp`/`tenant`/`action`) → Fly logs; Sentry (gateway + ad
 4. Which CSMS incumbents power local CPOs (check WSS hostnames/TLS certs on deployed chargers) — competitive intel.
 5. ~~Domain for the charger gateway~~ — done 13 Nov 2026: `ocpp.voltaracharging.com` → Fly (`docs/deploy-gateway.md` §3a).
 6. **Production charger catalogue** (pre-production review): brands/models exist only as dev data (`supabase/dev/demo-fleet.sql`). Curate the real list — models actually deployed in Malaysia, per-variant power and gun layout — and load it service-role before the first tenant registers chargers.
+7. **Place search provider** (pre-production review): the location form uses Photon/OpenStreetMap (free, keyless, `features/locations/geocode.ts`). Decide whether to move to Google Places for better Malaysian/Singaporean coverage (needs a billed API key), and check Photon's fair-use limits if we stay.

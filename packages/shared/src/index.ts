@@ -5,6 +5,7 @@
 export * from './domain';
 export * from './realtime';
 export * from './format';
+export * from './maps';
 export * as ocpp16 from './ocpp/v16';
 export * as billing from './billing';
 export type { Database, Json } from './database.types';
