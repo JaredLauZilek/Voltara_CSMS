@@ -8,7 +8,8 @@ import type { Queryable } from './client.js';
  * right now": payer from the ID tag, the driver groups that payer belongs to,
  * then the most specific matching assignment — connector › charge point ›
  * location › tenant; within a scope, a group match beats ad-hoc, which beats
- * 'all'; then priority; then newest. The tariff's LATEST version is used and
+ * 'all'; then priority; then newest. A whitelist discount, if any, is then
+ * taken off the energy price. The tariff's LATEST version is used and
  * frozen into the session as a snapshot; nothing after this instant can move
  * the price of a running session.
  */
@@ -41,6 +42,76 @@ interface ResolveRow {
   timezone: string;
 }
 
+/**
+ * Whether this tag may use the charger's site, and on what terms.
+ *
+ * A whitelist (driver group) covers named sites. A tag is on it when the tag
+ * itself, the app account it belongs to (or another tag of that account), or
+ * its company is a member — the same reading the driver app's map uses
+ * (`driver_on_whitelist`). A private site admits whitelisted tags only; the
+ * best discount among the whitelists covering the site applies.
+ */
+export interface SiteAccess {
+  isPrivate: boolean;
+  whitelisted: boolean;
+  discountBps: number;
+  discountGroupId: string | null;
+}
+
+export async function resolveSiteAccess(
+  db: Queryable,
+  input: { tenantId: string; chargePointId: string; idTagId: string | null },
+): Promise<SiteAccess> {
+  const rows = await db<
+    { is_private: boolean; group_id: string | null; discount_bps: number | null }[]
+  >`
+    with site as (
+      select l.id, l.is_private
+      from public.charge_points cp
+      join public.locations l on l.id = cp.location_id
+      where cp.id = ${input.chargePointId} and cp.tenant_id = ${input.tenantId}
+    ),
+    tag as (
+      select t.id, t.driver_user_id, t.billing_account_id
+      from public.id_tags t
+      where t.id = ${input.idTagId}::uuid and t.tenant_id = ${input.tenantId}
+    ),
+    covering as (
+      select g.id, g.discount_bps
+      from public.driver_group_locations gl
+      join public.driver_groups g on g.id = gl.driver_group_id
+      where gl.tenant_id = ${input.tenantId}
+        and gl.location_id = (select id from site)
+        and exists (
+          select 1
+          from public.driver_group_members m, tag
+          where m.driver_group_id = g.id
+            and (
+              m.id_tag_id = tag.id
+              or m.driver_user_id = tag.driver_user_id
+              or m.billing_account_id = tag.billing_account_id
+              or m.id_tag_id in (
+                select o.id from public.id_tags o
+                where o.tenant_id = ${input.tenantId} and o.driver_user_id = tag.driver_user_id
+              )
+            )
+        )
+      order by g.discount_bps desc, g.created_at
+      limit 1
+    )
+    select coalesce((select is_private from site), false) as is_private,
+           (select id from covering) as group_id,
+           (select discount_bps from covering) as discount_bps
+  `;
+  const row = rows[0];
+  return {
+    isPrivate: row?.is_private ?? false,
+    whitelisted: row?.group_id != null,
+    discountBps: row?.discount_bps ?? 0,
+    discountGroupId: row?.group_id ?? null,
+  };
+}
+
 export async function resolveTariff(
   db: Queryable,
   input: {
@@ -48,6 +119,8 @@ export async function resolveTariff(
     chargePointId: string;
     connectorId: string | null;
     idTagId: string | null;
+    /** Whitelist discount on the energy price, from resolveSiteAccess(). */
+    discount?: { bps: number; groupId: string | null };
   },
 ): Promise<ResolvedTariff | null> {
   const rows = await db<ResolveRow[]>`
@@ -55,7 +128,7 @@ export async function resolveTariff(
       select location_id from public.charge_points where id = ${input.chargePointId}
     ),
     payer as (
-      select t.billing_account_id
+      select t.billing_account_id, t.driver_user_id
       from public.id_tags t
       where t.id = ${input.idTagId}::uuid
     ),
@@ -67,6 +140,8 @@ export async function resolveTariff(
           m.id_tag_id = ${input.idTagId}::uuid
           or (m.billing_account_id is not null
               and m.billing_account_id = (select billing_account_id from payer))
+          or (m.driver_user_id is not null
+              and m.driver_user_id = (select driver_user_id from payer))
         )
     ),
     candidates as (
@@ -112,6 +187,12 @@ export async function resolveTariff(
   const row = rows[0];
   if (!row) return null;
 
+  const discountBps = input.discount?.bps ?? 0;
+  const elements =
+    discountBps > 0
+      ? billing.applyEnergyDiscount(billing.parseTariffElements(row.elements), discountBps)
+      : row.elements;
+
   const snapshot = billing.tariffSnapshotSchema.parse({
     tariff_id: row.tariff_id,
     tariff_version_id: row.tariff_version_id,
@@ -119,7 +200,7 @@ export async function resolveTariff(
     name: row.name,
     display_text: row.display_text,
     currency: row.currency,
-    elements: row.elements,
+    elements,
     min_price_sen: row.min_price_sen === null ? null : Number(row.min_price_sen),
     max_price_sen: row.max_price_sen === null ? null : Number(row.max_price_sen),
     tax_included: row.tax_included,
@@ -131,6 +212,9 @@ export async function resolveTariff(
       scope_type: row.scope_type,
       audience: row.audience,
       driver_group_id: row.driver_group_id,
+      ...(discountBps > 0
+        ? { discount_bps: discountBps, discount_group_id: input.discount?.groupId ?? null }
+        : {}),
     },
   });
 
@@ -139,7 +223,12 @@ export async function resolveTariff(
     tariffId: row.tariff_id,
     tariffVersionId: row.tariff_version_id,
     billingAccountId: row.billing_account_id,
-    driverGroupId: row.audience === 'group' ? row.driver_group_id : null,
+    driverGroupId:
+      row.audience === 'group'
+        ? row.driver_group_id
+        : discountBps > 0
+          ? (input.discount?.groupId ?? null)
+          : null,
   };
 }
 

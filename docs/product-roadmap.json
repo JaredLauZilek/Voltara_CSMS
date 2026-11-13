@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T11:31:08.681Z",
+  "updatedAt": "2026-11-13T11:34:49.111Z",
   "items": [
     {
       "id": "d5196b78",
@@ -14,7 +14,7 @@
     {
       "id": "8bde313a",
       "title": "Whitelist: private chargers and discounts",
-      "notes": "Admin and database built: a site can be marked private (hidden from the map except for whitelisted drivers), a whitelist covers chosen sites, holds drivers added by email or phone number, and carries a discount on the energy price (100% = free). Still to do: the gateway applying the discount and refusing non-whitelisted drivers at a private site.",
+      "notes": "Built end to end on the operator side: private sites (hidden from the map except for whitelisted drivers and refused at the charger for everyone else), whitelists covering chosen sites with drivers added by email or phone number, and a discount on the energy price (100% = free energy; any session, time or idle fee in the tariff still applies). Left: see it in the driver app and check the screens in a browser.",
       "area": "Billing",
       "status": "now",
       "priority": "high",
@@ -32,11 +32,11 @@
     {
       "id": "c94348d0",
       "title": "Gateway: whitelist discount and private sites at the charger",
-      "notes": "At session start, apply the whitelist discount to the energy price and count drivers added by email or phone; refuse a driver who is not whitelisted at a private site. Each ships an integration scenario.",
+      "notes": "The gateway takes a whitelist discount off the energy price at session start (best discount wins; time, parking and flat fees are not discounted) and refuses a driver who is not whitelisted at a private site. Covered by 7 integration scenarios.",
       "area": "Billing",
-      "status": "now",
+      "status": "done",
       "priority": "high",
-      "doneAt": null
+      "doneAt": "2026-11-13"
     },
     {
       "id": "cf3d6a75",
