@@ -150,6 +150,7 @@ export async function resetChargerState(): Promise<void> {
   await sql`delete from public.driver_join_codes`;
   await sql`delete from public.driver_profiles`;
   await sql`delete from public.driver_groups`;
+  await sql`update public.locations set is_private = false`;
   await sql`delete from public.tariff_assignments where id not in ('aaaa0004-0000-4000-8000-000000000001', 'aaaa0004-0000-4000-8000-000000000002')`;
   await sql`alter table public.tariff_versions disable trigger tariff_versions_immutable`;
   await sql`delete from public.tariff_versions where id not in ('aaaa0003-0000-4000-8000-000000000001', 'aaaa0003-0000-4000-8000-000000000002')`;

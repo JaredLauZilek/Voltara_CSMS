@@ -15,7 +15,9 @@ import {
   insertCdr,
   listEnergySamples,
   markChargingEnded,
+  resolveSiteAccess,
   resolveTariff,
+  type SiteAccess,
 } from '../../db/billing.js';
 import {
   findOpenSessionOnConnector,
@@ -55,22 +57,34 @@ export interface HandlerContext {
  * Unknown tags are Invalid, not Blocked: Blocked means "this tag exists and is
  * barred", and conflating the two makes RFID problems undiagnosable from the
  * charger's own logs.
+ *
+ * A private site admits only tags on a whitelist that covers it: a known tag
+ * that is not on one is Blocked there, and the always-authorise quirk never
+ * opens a private site to unknown tags.
  */
 async function authorizeIdTag(
   ctx: HandlerContext,
   idTag: string,
-): Promise<{ info: ocpp16.IdTagInfo; idTagId: string | null }> {
+): Promise<{ info: ocpp16.IdTagInfo; idTagId: string | null; access: SiteAccess }> {
   const { db, connection } = ctx;
   const tag = await findIdTag(db, connection.tenantId, idTag);
+  const access = await resolveSiteAccess(db, {
+    tenantId: connection.tenantId,
+    chargePointId: connection.chargePointId,
+    idTagId: tag?.id ?? null,
+  });
 
   if (!tag) {
-    if (connection.quirks.alwaysAuthorize) {
-      return { info: { status: 'Accepted' }, idTagId: null };
+    if (connection.quirks.alwaysAuthorize && !access.isPrivate) {
+      return { info: { status: 'Accepted' }, idTagId: null, access };
     }
-    return { info: { status: 'Invalid' }, idTagId: null };
+    return { info: { status: 'Invalid' }, idTagId: null, access };
   }
 
-  if (tag.status === 'blocked') return { info: { status: 'Blocked' }, idTagId: tag.id };
+  if (tag.status === 'blocked') return { info: { status: 'Blocked' }, idTagId: tag.id, access };
+  if (access.isPrivate && !access.whitelisted) {
+    return { info: { status: 'Blocked' }, idTagId: tag.id, access };
+  }
 
   // The driver returns timestamptz as a Date; the wire schema demands an ISO
   // string, and strict mode validates the response object before it is
@@ -80,7 +94,7 @@ async function authorizeIdTag(
   const expired =
     tag.status === 'expired' || (tag.expires_at !== null && new Date(tag.expires_at) < new Date());
   if (expired) {
-    return { info: { status: 'Expired', expiryDate }, idTagId: tag.id };
+    return { info: { status: 'Expired', expiryDate }, idTagId: tag.id, access };
   }
 
   return {
@@ -90,6 +104,7 @@ async function authorizeIdTag(
       parentIdTag: tag.parent_tag ?? undefined,
     },
     idTagId: tag.id,
+    access,
   };
 }
 
@@ -254,7 +269,7 @@ export async function handleStartTransaction(
   const req = ocpp16.startTransactionReqSchema.parse(params);
   const { db, connection } = ctx;
 
-  const { info, idTagId } = await authorizeIdTag(ctx, req.idTag);
+  const { info, idTagId, access } = await authorizeIdTag(ctx, req.idTag);
   if (info.status !== 'Accepted') {
     // No session row for a start we refused — a phantom "active" session would
     // corrupt utilisation and never be closed by anything.
@@ -283,6 +298,7 @@ export async function handleStartTransaction(
     chargePointId: connection.chargePointId,
     connectorId: connector.id,
     idTagId,
+    discount: { bps: access.discountBps, groupId: access.discountGroupId },
   });
   if (!resolved) {
     ctx.logger.warn({ idTag: req.idTag }, 'no tariff applies — session will be unbillable');

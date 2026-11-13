@@ -84,10 +84,34 @@ export const tariffSnapshotSchema = z.object({
       scope_type: z.string().nullable().optional(),
       audience: z.string().nullable().optional(),
       driver_group_id: z.string().uuid().nullable().optional(),
+      /** Whitelist discount already taken off the ENERGY prices above. */
+      discount_bps: z.number().int().min(0).max(10_000).optional(),
+      discount_group_id: z.string().uuid().nullable().optional(),
     })
     .optional(),
 });
 export type TariffSnapshot = z.infer<typeof tariffSnapshotSchema>;
+
+/**
+ * A whitelist discount: every ENERGY price reduced by `discountBps` (10000 =
+ * free). Time, parking and flat fees are untouched — the discount is on the
+ * energy price only.
+ */
+export function applyEnergyDiscount(
+  elements: TariffElement[],
+  discountBps: number,
+): TariffElement[] {
+  const bps = Math.min(10_000, Math.max(0, Math.round(discountBps)));
+  if (bps === 0) return elements;
+  return elements.map((element) => ({
+    ...element,
+    price_components: element.price_components.map((c) =>
+      c.type === 'ENERGY'
+        ? { ...c, price_sen: Math.round((c.price_sen * (10_000 - bps)) / 10_000) }
+        : c,
+    ),
+  }));
+}
 
 export function parseTariffElements(input: unknown): TariffElement[] {
   return z.array(tariffElementSchema).min(1).parse(input);

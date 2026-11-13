@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { periodsFromSession, priceSession, type ChargingPeriod } from './engine';
 import { bps, exclFromIncl, formatSen, parseSen, roundSen } from './money';
 import { buildElements, describeElements, detectPreset } from './presets';
-import { TARIFF_PRESETS, tariffSnapshotSchema, type TariffElement } from './tariff';
+import {
+  applyEnergyDiscount,
+  TARIFF_PRESETS,
+  tariffSnapshotSchema,
+  type TariffElement,
+} from './tariff';
 
 const snapshot = (
   elements: TariffElement[],
@@ -414,5 +419,20 @@ describe('presets round-trip', () => {
     ];
     expect(detectPreset(elements).kind).toBe('custom');
     expect(describeElements(elements)).toContain('RM 1.00/kWh');
+  });
+});
+
+describe('applyEnergyDiscount', () => {
+  const elements = TARIFF_PRESETS.perKwhWithIdle(120, 100, 15);
+
+  it('reduces only the energy price', () => {
+    const [energy, idle] = applyEnergyDiscount(elements, 2_500);
+    expect(energy.price_components[0].price_sen).toBe(90);
+    expect(idle).toEqual(elements[1]);
+  });
+
+  it('makes energy free at 100% and changes nothing at 0%', () => {
+    expect(applyEnergyDiscount(elements, 10_000)[0].price_components[0].price_sen).toBe(0);
+    expect(applyEnergyDiscount(elements, 0)).toBe(elements);
   });
 });
