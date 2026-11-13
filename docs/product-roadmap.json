@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T11:34:49.111Z",
+  "updatedAt": "2026-11-13T11:46:27.953Z",
   "items": [
     {
       "id": "d5196b78",
@@ -310,11 +310,11 @@
     },
     {
       "id": "df75e610",
-      "title": "Singapore support",
-      "notes": "Country on sites, no Malaysian state, local licensing rules.",
+      "title": "Multi-country on one backend (Malaysia + Singapore)",
+      "notes": "One CSMS and one app for every country, no second deployment. The site's country decides currency, tax, timezone and which Stripe account takes the money (one Stripe account per country). To build: a per-country set-up record per operator (currency, tax, payment account, invoice details); country picker on sites (the column exists, defaults to MY); SGD tariffs and GST; a country filter and per-currency totals on dashboards and reports (never add RM and S$ together); one company invoice per country; Singapore licensing. Decide before Payments (Phase 5) is built.",
       "area": "Compliance",
-      "status": "later",
-      "priority": "medium",
+      "status": "next",
+      "priority": "high",
       "doneAt": null
     },
     {
