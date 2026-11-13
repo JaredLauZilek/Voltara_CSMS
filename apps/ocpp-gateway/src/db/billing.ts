@@ -188,10 +188,10 @@ export async function resolveTariff(
   if (!row) return null;
 
   const discountBps = input.discount?.bps ?? 0;
-  const elements =
-    discountBps > 0
-      ? billing.applyEnergyDiscount(billing.parseTariffElements(row.elements), discountBps)
-      : row.elements;
+  const listElements = discountBps > 0 ? billing.parseTariffElements(row.elements) : null;
+  const elements = listElements
+    ? billing.applyEnergyDiscount(listElements, discountBps)
+    : row.elements;
 
   const snapshot = billing.tariffSnapshotSchema.parse({
     tariff_id: row.tariff_id,
@@ -201,6 +201,7 @@ export async function resolveTariff(
     display_text: row.display_text,
     currency: row.currency,
     elements,
+    ...(listElements ? { list_elements: listElements } : {}),
     min_price_sen: row.min_price_sen === null ? null : Number(row.min_price_sen),
     max_price_sen: row.max_price_sen === null ? null : Number(row.max_price_sen),
     tax_included: row.tax_included,
@@ -291,6 +292,8 @@ export interface CdrInsert {
   /** Session facts — recorded whether or not a tariff priced them. */
   totals: { energyWh: number; timeS: number; parkingTimeS: number };
   cost: billing.CostBreakdown | null;
+  /** Whitelist discount already taken off the cost, in minor units. */
+  discountSen?: number;
   billable: boolean;
   unbillableReason: string | null;
   remark?: string | null;
@@ -306,7 +309,7 @@ export async function insertCdr(db: Queryable, input: CdrInsert): Promise<{ id: 
       total_energy_wh, total_time_s, total_parking_time_s, currency,
       tariff_id, tariff_version_id, tariff_snapshot, charging_periods, lines,
       total_energy_cost_sen, total_time_cost_sen, total_parking_cost_sen, total_fixed_cost_sen,
-      subtotal_sen, tax_rate_bps, tax_sen, total_sen, billable, unbillable_reason, remark
+      subtotal_sen, tax_rate_bps, tax_sen, total_sen, discount_sen, billable, unbillable_reason, remark
     ) values (
       ${input.tenantId}, ${input.chargingSessionId}, ${input.chargePointId},
       (select location_id from public.charge_points where id = ${input.chargePointId}),
@@ -323,6 +326,7 @@ export async function insertCdr(db: Queryable, input: CdrInsert): Promise<{ id: 
       ${c?.totalEnergyCostSen ?? 0}, ${c?.totalTimeCostSen ?? 0}, ${c?.totalParkingCostSen ?? 0},
       ${c?.totalFixedCostSen ?? 0},
       ${c?.subtotalSen ?? 0}, ${c?.taxRateBps ?? 0}, ${c?.taxSen ?? 0}, ${c?.totalSen ?? 0},
+      ${input.discountSen ?? 0},
       ${input.billable}, ${input.unbillableReason}, ${input.remark ?? null}
     )
     returning id
@@ -336,11 +340,13 @@ export async function applySessionCost(
   sessionId: string,
   cost: billing.CostBreakdown | null,
   idleSeconds: number,
+  discountSen = 0,
 ): Promise<void> {
   await db`
     update public.charging_sessions set
       amount_gross = ${cost ? cost.totalSen / 100 : null},
       amount_tax = ${cost ? cost.taxSen / 100 : null},
+      amount_discount = ${cost ? discountSen / 100 : null},
       currency = ${cost?.currency ?? null},
       idle_seconds = ${idleSeconds}
     where id = ${sessionId}

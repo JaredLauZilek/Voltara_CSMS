@@ -77,6 +77,11 @@ export const tariffSnapshotSchema = z.object({
   tax_code: z.string().default('SST'),
   /** IANA zone the time-of-day restrictions are expressed in. */
   timezone: z.string().default('Asia/Kuala_Lumpur'),
+  /**
+   * The undiscounted elements, kept only when a whitelist discount was taken
+   * off `elements` — so the discount can be stated in money at the end.
+   */
+  list_elements: z.array(tariffElementSchema).min(1).optional(),
   /** Why this tariff applied — kept for audit and the receipt footer. */
   resolved_by: z
     .object({

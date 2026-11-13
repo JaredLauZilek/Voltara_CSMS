@@ -487,6 +487,13 @@ export async function handleStopTransaction(
 
     const snapshot = session.tariff_snapshot;
     const cost = snapshot ? billing.priceSession(periods, snapshot) : null;
+    // A whitelist discount is stated in money by pricing the same periods at
+    // the list prices the snapshot kept, and taking the difference.
+    const listCost =
+      snapshot?.list_elements && cost
+        ? billing.priceSession(periods, { ...snapshot, elements: snapshot.list_elements })
+        : null;
+    const discountSen = listCost && cost ? Math.max(0, listCost.totalSen - cost.totalSen) : 0;
     const cdr = await insertCdr(tx, {
       tenantId: connection.tenantId,
       chargingSessionId: session.id,
@@ -504,10 +511,11 @@ export async function handleStopTransaction(
       periods,
       totals: { energyWh: result.energy_wh, timeS: chargingSeconds, parkingTimeS: idleSeconds },
       cost,
+      discountSen,
       billable: Boolean(cost),
       unbillableReason: cost ? null : 'no_tariff',
     });
-    await applySessionCost(tx, session.id, cost, Math.round(idleSeconds));
+    await applySessionCost(tx, session.id, cost, Math.round(idleSeconds), discountSen);
 
     return { energyWh: result.energy_wh as number | null, cdrId: cdr.id as string | null, cost };
   });

@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MeterEvent } from '@voltara/shared';
 import { useRealtimeEvent } from '@/shared/realtime';
 import * as api from './api';
-import type { SessionFilters } from './api';
-import type { SessionWithChargePoint } from './types';
+import type { SessionFilters, SessionReportFilters } from './api';
+import type { SessionReportRow, SessionWithChargePoint } from './types';
 
 const KEY = ['sessions'] as const;
 
@@ -23,14 +23,16 @@ export function useLiveSessions() {
   });
 
   useRealtimeEvent('meter', (event: MeterEvent) => {
-    qc.setQueriesData<SessionWithChargePoint[]>({ queryKey: KEY, exact: false }, (rows) =>
-      Array.isArray(rows)
-        ? rows.map((s) =>
-            s.id === event.sessionId && event.energyWh !== null && s.meter_start_wh !== null
-              ? { ...s, energy_wh: Math.max(0, event.energyWh - Number(s.meter_start_wh)) }
-              : s,
-          )
-        : rows,
+    qc.setQueriesData<(SessionWithChargePoint | SessionReportRow)[]>(
+      { queryKey: KEY, exact: false },
+      (rows) =>
+        Array.isArray(rows)
+          ? rows.map((s) =>
+              s.id === event.sessionId && event.energyWh !== null && s.meter_start_wh !== null
+                ? { ...s, energy_wh: Math.max(0, event.energyWh - Number(s.meter_start_wh)) }
+                : s,
+            )
+          : rows,
     );
     qc.setQueryData<
       { session: SessionWithChargePoint | null; livePowerW: number | null } | undefined
@@ -82,5 +84,14 @@ export function useSessionMinutes(id: string, open: boolean) {
     queryFn: () => api.listSessionMinutes(id),
     // The rollup job runs every 5 minutes; poll a live session at that cadence.
     refetchInterval: open ? 60_000 : false,
+  });
+}
+
+export function useSessionReport(filters: SessionReportFilters) {
+  useLiveSessions();
+  return useQuery({
+    queryKey: ['sessions', 'report', filters],
+    queryFn: () => api.listSessionReport(filters),
+    refetchInterval: 60_000,
   });
 }

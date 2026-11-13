@@ -180,6 +180,7 @@ export type Database = {
           credit: boolean
           credit_reference_id: string | null
           currency: string
+          discount_sen: number
           driver_group_id: string | null
           end_at: string
           id: string
@@ -219,6 +220,7 @@ export type Database = {
           credit?: boolean
           credit_reference_id?: string | null
           currency?: string
+          discount_sen?: number
           driver_group_id?: string | null
           end_at: string
           id?: string
@@ -258,6 +260,7 @@ export type Database = {
           credit?: boolean
           credit_reference_id?: string | null
           currency?: string
+          discount_sen?: number
           driver_group_id?: string | null
           end_at?: string
           id?: string
@@ -673,6 +676,7 @@ export type Database = {
       }
       charging_sessions: {
         Row: {
+          amount_discount: number | null
           amount_gross: number | null
           amount_tax: number | null
           billing_account_id: string | null
@@ -707,6 +711,7 @@ export type Database = {
           vehicle_identifier: string | null
         }
         Insert: {
+          amount_discount?: number | null
           amount_gross?: number | null
           amount_tax?: number | null
           billing_account_id?: string | null
@@ -741,6 +746,7 @@ export type Database = {
           vehicle_identifier?: string | null
         }
         Update: {
+          amount_discount?: number | null
           amount_gross?: number | null
           amount_tax?: number | null
           billing_account_id?: string | null
@@ -2414,6 +2420,50 @@ export type Database = {
           phone: string
           tags: Json
           user_id: string
+        }[]
+      }
+      admin_list_sessions: {
+        Args: {
+          p_charge_point_id?: string
+          p_from?: string
+          p_limit?: number
+          p_location_id?: string
+          p_to?: string
+        }
+        Returns: {
+          amount_discount: number
+          amount_gross: number
+          amount_tax: number
+          billing_account_id: string
+          billing_account_kind: string
+          billing_account_name: string
+          charge_point_id: string
+          charge_point_identity: string
+          connector_type: string
+          currency: string
+          discount_bps: number
+          driver_email: string
+          driver_group_id: string
+          driver_group_name: string
+          driver_name: string
+          driver_phone: string
+          driver_user_id: string
+          ended_at: string
+          energy_wh: number
+          id: string
+          id_tag: string
+          location_id: string
+          location_name: string
+          max_kw: number
+          meter_start_wh: number
+          ocpp_connector_id: number
+          ocpp_transaction_id: number
+          offline: boolean
+          parking_lot: string
+          start_source: string
+          started_at: string
+          status: string
+          vehicle_plate: string
         }[]
       }
       buyer_snapshot: { Args: { p_account: string }; Returns: Json }

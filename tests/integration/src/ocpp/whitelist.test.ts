@@ -97,6 +97,14 @@ describe('whitelist discount on the energy price', () => {
     // 7.4 kWh at RM 0.90 instead of RM 1.20.
     expect(Number(cdr.total_energy_cost_sen)).toBe(666);
     expect(Number(cdr.total_sen)).toBe(666);
+    // The discount is stated in money on the record and on the session.
+    expect(Number(cdr.discount_sen)).toBe(222);
+    const [session] = await sql`
+      select amount_gross, amount_discount from public.charging_sessions
+      where id = ${cdr.charging_session_id}
+    `;
+    expect(Number(session.amount_gross)).toBeCloseTo(6.66, 2);
+    expect(Number(session.amount_discount)).toBeCloseTo(2.22, 2);
     expect(cdr.driver_group_id).toBe(groupId);
     const snapshot = cdr.tariff_snapshot as {
       resolved_by: { discount_bps: number; discount_group_id: string };
@@ -115,6 +123,7 @@ describe('whitelist discount on the energy price', () => {
     expect(Number(cdr.total_energy_wh)).toBe(7_400);
     expect(Number(cdr.total_energy_cost_sen)).toBe(0);
     expect(Number(cdr.total_sen)).toBe(0);
+    expect(Number(cdr.discount_sen)).toBe(888);
 
     await charger.close();
   });
@@ -126,6 +135,7 @@ describe('whitelist discount on the energy price', () => {
 
     expect(Number(cdr.total_sen)).toBe(888);
     expect(cdr.driver_group_id).toBeNull();
+    expect(Number(cdr.discount_sen)).toBe(0);
 
     await charger.close();
   });

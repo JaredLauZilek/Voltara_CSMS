@@ -133,4 +133,58 @@ select '11111111-1111-4111-8111-111111111111', g.id, md5('demo-company:kinta')::
 from public.driver_groups g where g.id = md5('demo-whitelist:hq')::uuid
 on conflict do nothing;
 
+-- ── Past sessions get drivers, vehicles and discounts ───────────────────────
+-- So the Sessions list shows who charged, in what, and on what terms.
+update public.driver_profiles p set vehicle_plate = v.plate, vehicle_model = v.model
+from (values
+  ('aiman', 'VKL 2481', 'BYD Atto 3'), ('mei', 'VKL 7730', 'BYD Dolphin'),
+  ('kumar', 'BRA 1905', 'BYD Seal'), ('farah', 'WXY 1234', 'Tesla Model 3'),
+  ('jason', 'JQB 5678', 'Hyundai Ioniq 5'), ('daniel', 'WC 8821 K', 'Tesla Model Y'),
+  ('priya', 'VEV 3090', 'Volvo EX30')
+) as v(key, plate, model)
+where p.user_id = md5('demo-driver:' || v.key)::uuid and p.vehicle_plate is null;
+
+-- Seven in ten demo sessions were started from a driver's app; the rest stay
+-- as walk-up RFID sessions with no known driver.
+with tags as (
+  select t.id, t.tag, t.billing_account_id, row_number() over (order by t.tag) - 1 as n
+  from public.id_tags t
+  where t.tenant_id = '11111111-1111-4111-8111-111111111111'
+    and t.kind = 'virtual' and t.driver_user_id is not null
+),
+picked as (
+  select s.id, ('x' || left(md5(s.id::text), 6))::bit(24)::int % 10 as slot
+  from public.charging_sessions s
+  where s.tenant_id = '11111111-1111-4111-8111-111111111111' and s.id_tag_id is null
+)
+update public.charging_sessions s
+set id_tag = t.tag, id_tag_id = t.id, billing_account_id = t.billing_account_id,
+    start_source = 'app'
+from picked p join tags t on t.n = p.slot
+where s.id = p.id;
+
+-- Whitelist terms on those sessions: residents 20% off at Vantage, HQ fleet
+-- partners free at HQ. (Applied to the whole amount here; the gateway
+-- discounts the energy price only.)
+update public.charging_sessions s
+set driver_group_id = g.id,
+    amount_discount = round(s.amount_gross * g.discount_bps / 10000.0, 2),
+    amount_gross = s.amount_gross - round(s.amount_gross * g.discount_bps / 10000.0, 2),
+    tariff_snapshot = case when s.tariff_snapshot is null then null else
+      jsonb_set(s.tariff_snapshot, '{resolved_by}',
+        coalesce(s.tariff_snapshot -> 'resolved_by', '{}'::jsonb)
+          || jsonb_build_object('discount_bps', g.discount_bps, 'discount_group_id', g.id)) end
+from public.charge_points cp, public.driver_group_locations gl, public.driver_groups g,
+     public.id_tags t
+where cp.id = s.charge_point_id
+  and gl.location_id = cp.location_id and g.id = gl.driver_group_id
+  and t.id = s.id_tag_id
+  and exists (
+    select 1 from public.driver_group_members m
+    where m.driver_group_id = g.id
+      and (m.driver_user_id = t.driver_user_id or m.billing_account_id = t.billing_account_id)
+  )
+  and s.tenant_id = '11111111-1111-4111-8111-111111111111'
+  and s.amount_gross is not null and s.amount_discount is null and s.driver_group_id is null;
+
 commit;
