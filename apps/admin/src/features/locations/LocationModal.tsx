@@ -58,6 +58,7 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
       jmb_name: null,
       lat: null,
       lng: null,
+      is_private: false,
     };
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -243,6 +244,32 @@ export function LocationModal({ location, onClose, onSave, onDelete, isSaving, s
             style={inputStyle}
           />
         </div>
+        <label
+          style={{
+            gridColumn: '1/-1',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 8,
+            fontSize: 13,
+            color: C.ink,
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={form.is_private ?? false}
+            onChange={(e) => setForm((f) => ({ ...f, is_private: e.target.checked }))}
+            style={{ accentColor: C.green, marginTop: 2 }}
+          />
+          <span>
+            <strong>Private site</strong>
+            <span style={{ color: C.slate }}>
+              {' '}
+              — hidden from the app's map. Only accounts on a whitelist that covers this site can
+              see and use its chargers (Charging management → Whitelist).
+            </span>
+          </span>
+        </label>
         <div style={{ gridColumn: '1/-1', fontSize: 12, color: C.slate }}>
           {links ? (
             <>

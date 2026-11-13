@@ -1,4 +1,5 @@
-// The ONLY place `supabase.from('driver_groups' | 'driver_group_members')` may appear.
+// The ONLY place `supabase.from('driver_groups' | 'driver_group_members' |
+// 'driver_group_locations')` may appear.
 import { supabase } from '@/shared/lib/supabase';
 import type {
   DriverGroup,
@@ -80,5 +81,33 @@ export async function addMember(
 
 export async function removeMember(id: string): Promise<void> {
   const { error } = await supabase.from('driver_group_members').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** The sites a whitelist covers: where its members may charge and get its discount. */
+export async function listGroupLocationIds(groupId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('driver_group_locations')
+    .select('location_id')
+    .eq('driver_group_id', groupId);
+  if (error) throw error;
+  return (data ?? []).map((r) => r.location_id);
+}
+
+export async function setGroupLocation(
+  tenantId: string,
+  groupId: string,
+  locationId: string,
+  covered: boolean,
+): Promise<void> {
+  const { error } = covered
+    ? await supabase
+        .from('driver_group_locations')
+        .insert({ tenant_id: tenantId, driver_group_id: groupId, location_id: locationId })
+    : await supabase
+        .from('driver_group_locations')
+        .delete()
+        .eq('driver_group_id', groupId)
+        .eq('location_id', locationId);
   if (error) throw error;
 }

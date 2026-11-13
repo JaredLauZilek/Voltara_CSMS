@@ -62,3 +62,21 @@ export function useRemoveMember() {
   const invalidate = useInvalidate();
   return useMutation({ mutationFn: (id: string) => api.removeMember(id), onSuccess: invalidate });
 }
+
+export function useGroupLocationIds(groupId: string | null) {
+  return useQuery({
+    queryKey: ['driver-groups', 'locations', groupId],
+    queryFn: () => api.listGroupLocationIds(groupId!),
+    enabled: Boolean(groupId),
+  });
+}
+
+export function useSetGroupLocation(groupId: string) {
+  const { tenantId } = useAuth();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ locationId, covered }: { locationId: string; covered: boolean }) =>
+      api.setGroupLocation(tenantId, groupId, locationId, covered),
+    onSuccess: invalidate,
+  });
+}

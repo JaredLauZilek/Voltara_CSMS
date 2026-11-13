@@ -37,3 +37,12 @@ export async function deleteIdTag(id: string): Promise<void> {
   const { error } = await supabase.from('id_tags').delete().eq('id', id);
   if (error) throw error;
 }
+
+/** Detach every tag of one app account from its company (the tags themselves stay). */
+export async function unassignDriver(driverUserId: string): Promise<void> {
+  const { error } = await supabase
+    .from('id_tags')
+    .update({ billing_account_id: null })
+    .eq('driver_user_id', driverUserId);
+  if (error) throw error;
+}

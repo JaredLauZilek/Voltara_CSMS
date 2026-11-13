@@ -1,21 +1,12 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T10:40:27.088Z",
+  "updatedAt": "2026-11-13T11:31:08.681Z",
   "items": [
     {
       "id": "d5196b78",
-      "title": "VIN charging (Autocharge / Plug & Charge)",
-      "notes": "Start a session from the car identity. Depends on what each charger sends as the ID; store the VIN on the account now, verify per charger model later.",
+      "title": "Vehicle recognition (Autocharge)",
+      "notes": "The charger reads the car's identifier and sends it as the ID. Never typed in: the gateway records it on a normal session and it is stored against a company vehicle only after consent. Mostly DC chargers; some car brands randomise the identifier. Needed before the company rules \"vehicles only\" and \"vehicle and driver\" can be enforced.",
       "area": "Chargers",
-      "status": "later",
-      "priority": "medium",
-      "doneAt": null
-    },
-    {
-      "id": "53081eb6",
-      "title": "Account number shown in the app",
-      "notes": "A short unique number per driver account, so an operator can add the account to a company or whitelist.",
-      "area": "Driver app",
       "status": "next",
       "priority": "high",
       "doneAt": null
@@ -23,7 +14,7 @@
     {
       "id": "8bde313a",
       "title": "Whitelist: private chargers and discounts",
-      "notes": "A whitelist names the accounts that may see and use a private charger (hidden from the map for everyone else), with an optional discount up to 100% (free). Built on driver groups; needs a private flag on chargers and a discount on the group.",
+      "notes": "Admin and database built: a site can be marked private (hidden from the map except for whitelisted drivers), a whitelist covers chosen sites, holds drivers added by email or phone number, and carries a discount on the energy price (100% = free). Still to do: the gateway applying the discount and refusing non-whitelisted drivers at a private site.",
       "area": "Billing",
       "status": "now",
       "priority": "high",
@@ -32,7 +23,16 @@
     {
       "id": "46bdf0fe",
       "title": "Corporate charging: companies and their driver accounts",
-      "notes": "A company is billed monthly for all its drivers, who pay nothing at the charger. Add app accounts to a company by account number; each account can also carry RFID cards and a VIN. Built on billing accounts and ID tags; the menu entry exists, the screen is still the old billing-accounts one.",
+      "notes": "Admin and database built: a company has drivers (app accounts added by email or phone number, each with optional RFID cards), vehicles (plate, model, VIN for reference) and a rule for who may charge on its bill. Still to do: the gateway enforcing the vehicle rules.",
+      "area": "Billing",
+      "status": "now",
+      "priority": "high",
+      "doneAt": null
+    },
+    {
+      "id": "c94348d0",
+      "title": "Gateway: whitelist discount and private sites at the charger",
+      "notes": "At session start, apply the whitelist discount to the energy price and count drivers added by email or phone; refuse a driver who is not whitelisted at a private site. Each ships an integration scenario.",
       "area": "Billing",
       "status": "now",
       "priority": "high",
