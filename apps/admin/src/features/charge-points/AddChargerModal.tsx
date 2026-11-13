@@ -266,6 +266,7 @@ export function AddChargerModal({ onClose }: { onClose: () => void }) {
  * The key is displayed here and nowhere else, ever. It is stored only as a
  * bcrypt hash, so this screen is the single moment it exists in readable form —
  * hence the warning, the copy buttons, and no "close" until it is acknowledged.
+ * An open (profile 0) charger has no key: no warning, nothing to acknowledge.
  */
 function CredentialsStep({
   charger,
@@ -289,11 +290,15 @@ function CredentialsStep({
   // one field with a separate TLS toggle supplying the scheme. Show both, with
   // the port explicit — that firmware's parsers often require it.
   const serverUrl = `${GATEWAY_URL.replace(/\/$/, '')}/ocpp`;
-  // Profile 1 forces plaintext; 0 works either way but TLS is recommended when
-  // the charger supports it — matching how incumbent networks configure units.
-  const plaintext = securityProfile === 1;
-  const hostPortUrl = gatewayDisplayHost(GATEWAY_URL, plaintext);
+  // Profile 2 needs TLS (port 443), profile 1 plaintext (port 80). An open
+  // charger may use either, and the cheap units that run open often cannot do
+  // TLS at all — so it gets both, TLS first as the one to prefer.
   const noAuth = securityProfile === 0;
+  const showTls = securityProfile !== 1;
+  const showPlain = securityProfile !== 2;
+  const plaintext = !showTls;
+  const mustAcknowledge = !noAuth;
+  const canClose = !mustAcknowledge || acknowledged;
 
   return (
     <Modal
@@ -302,28 +307,39 @@ function CredentialsStep({
       onClose={onClose}
       width={620}
     >
-      <div
-        style={{
-          background: C.warningBg,
-          border: `1px solid ${C.warning}33`,
-          borderRadius: 10,
-          padding: '12px 14px',
-          fontSize: 12,
-          color: C.warning,
-          fontWeight: 600,
-          lineHeight: 1.5,
-        }}
-      >
-        The key below is shown once. It is stored only as a hash — if it is lost, register the
-        charger again rather than trying to recover it.
-      </div>
+      {mustAcknowledge && (
+        <div
+          style={{
+            background: C.warningBg,
+            border: `1px solid ${C.warning}33`,
+            borderRadius: 10,
+            padding: '12px 14px',
+            fontSize: 12,
+            color: C.warning,
+            fontWeight: 600,
+            lineHeight: 1.5,
+          }}
+        >
+          The key below is shown once. It is stored only as a hash — if it is lost, register the
+          charger again rather than trying to recover it.
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <CopyRow
-          label={plaintext ? 'Server URL · TLS OFF' : 'Server URL · TLS ON'}
-          value={hostPortUrl}
-          mono
-        />
+        {showTls && (
+          <CopyRow
+            label="Server URL · TLS ON"
+            value={gatewayDisplayHost(GATEWAY_URL, false)}
+            mono
+          />
+        )}
+        {showPlain && (
+          <CopyRow
+            label="Server URL · TLS OFF"
+            value={gatewayDisplayHost(GATEWAY_URL, true)}
+            mono
+          />
+        )}
         <CopyRow label="Charge Point ID" value={charger.ocppIdentity} mono />
         {!noAuth && (
           <>
@@ -338,7 +354,8 @@ function CredentialsStep({
         {noAuth ? (
           <>
             . <strong>No username or password is needed</strong> — leave auth disabled on the
-            charger; TLS on or off both work (TLS recommended if the unit supports it).
+            charger. Use the TLS ON address if the unit has a TLS setting, otherwise TLS OFF; match
+            the charger's TLS toggle to the address you enter.
           </>
         ) : plaintext ? (
           <>
@@ -354,41 +371,43 @@ function CredentialsStep({
           </>
         )}{' '}
         The charger appends its own ID to the URL. If yours wants a full URL instead of host:port,
-        use{' '}
-        <code style={{ fontSize: 11 }}>
-          {plaintext ? serverUrl.replace(/^wss:/, 'ws:') : serverUrl}
-        </code>
+        use {showTls && <code style={{ fontSize: 11 }}>{serverUrl}</code>}
+        {showTls && showPlain && ' (TLS) or '}
+        {showPlain && <code style={{ fontSize: 11 }}>{serverUrl.replace(/^wss:/, 'ws:')}</code>}
+        {showTls && showPlain && ' (no TLS)'}
       </div>
 
       <ConnectionWatch connected={connected} everBooted={everBooted} watched={watched} />
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 12,
-            color: C.slate,
-            cursor: 'pointer',
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={acknowledged}
-            onChange={(e) => setAcknowledged(e.target.checked)}
-            style={{ accentColor: C.green, cursor: 'pointer' }}
-          />
-          I have saved the key
-        </label>
+        {mustAcknowledge && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 12,
+              color: C.slate,
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+              style={{ accentColor: C.green, cursor: 'pointer' }}
+            />
+            I have saved the key
+          </label>
+        )}
         <button
           onClick={onClose}
-          disabled={!acknowledged}
+          disabled={!canClose}
           style={{
             ...primaryButton,
-            background: acknowledged ? C.green : C.slate,
-            cursor: acknowledged ? 'pointer' : 'not-allowed',
-            opacity: acknowledged ? 1 : 0.6,
+            background: canClose ? C.green : C.slate,
+            cursor: canClose ? 'pointer' : 'not-allowed',
+            opacity: canClose ? 1 : 0.6,
           }}
         >
           Done
