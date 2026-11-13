@@ -2,6 +2,8 @@
 
 The full approved plan (2026-07-26). Durable _contracts_ live in [CLAUDE.md](../CLAUDE.md); this document tracks the phased roadmap and the reasoning behind it. Update the checklist as phases land.
 
+**Day-to-day work items** (what is in progress, next, later and done) live in [product-roadmap.json](product-roadmap.json), edited from the admin under **Dev → Roadmap** (a Now / Next / Later / Done board). This document keeps the phases and the reasoning; the board keeps the list.
+
 ## Phase tracker
 
 - [x] **Phase 0 — Scaffold, CI, Supabase, tenancy, UI port** · done 26 Jul 2026 (`8cc4d36`)
