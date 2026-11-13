@@ -3,7 +3,7 @@
 //
 //   pnpm sim:session                                  # local gateway, seeded VCP-DEMO-001
 //   pnpm sim:session --kwh 12 --minutes 45 --idle-min 20
-//   pnpm sim:session --url wss://voltara-gateway-staging.fly.dev \
+//   pnpm sim:session --url wss://ocpp.voltaracharging.com \
 //       --identity VLT-CANARY-001 --key … --check --expect-sen 888
 //
 // This is both the end-user's "make a session happen without a car" tool and
