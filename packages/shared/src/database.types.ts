@@ -86,6 +86,7 @@ export type Database = {
           address: string | null
           billing_model: string
           business_registration_no: string | null
+          charging_rule: string
           created_at: string
           email: string | null
           id: string
@@ -108,6 +109,7 @@ export type Database = {
           address?: string | null
           billing_model?: string
           business_registration_no?: string | null
+          charging_rule?: string
           created_at?: string
           email?: string | null
           id?: string
@@ -130,6 +132,7 @@ export type Database = {
           address?: string | null
           billing_model?: string
           business_registration_no?: string | null
+          charging_rule?: string
           created_at?: string
           email?: string | null
           id?: string
@@ -701,6 +704,7 @@ export type Database = {
           tariff_version_id: string | null
           tenant_id: string
           updated_at: string
+          vehicle_identifier: string | null
         }
         Insert: {
           amount_gross?: number | null
@@ -734,6 +738,7 @@ export type Database = {
           tariff_version_id?: string | null
           tenant_id: string
           updated_at?: string
+          vehicle_identifier?: string | null
         }
         Update: {
           amount_gross?: number | null
@@ -767,6 +772,7 @@ export type Database = {
           tariff_version_id?: string | null
           tenant_id?: string
           updated_at?: string
+          vehicle_identifier?: string | null
         }
         Relationships: [
           {
@@ -1049,6 +1055,52 @@ export type Database = {
           },
         ]
       }
+      driver_group_locations: {
+        Row: {
+          created_at: string
+          driver_group_id: string
+          id: string
+          location_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          driver_group_id: string
+          id?: string
+          location_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          driver_group_id?: string
+          id?: string
+          location_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_group_locations_driver_group_id_fkey"
+            columns: ["driver_group_id"]
+            isOneToOne: false
+            referencedRelation: "driver_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_group_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_group_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_group_members: {
         Row: {
           billing_account_id: string | null
@@ -1112,6 +1164,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          discount_bps: number
           id: string
           kind: string
           name: string
@@ -1120,6 +1173,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          discount_bps?: number
           id?: string
           kind?: string
           name: string
@@ -1128,6 +1182,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          discount_bps?: number
           id?: string
           kind?: string
           name?: string
@@ -1416,6 +1471,7 @@ export type Database = {
           country: string
           created_at: string
           id: string
+          is_private: boolean
           jmb_name: string | null
           lat: number | null
           lng: number | null
@@ -1433,6 +1489,7 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          is_private?: boolean
           jmb_name?: string | null
           lat?: number | null
           lng?: number | null
@@ -1450,6 +1507,7 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          is_private?: boolean
           jmb_name?: string | null
           lat?: number | null
           lng?: number | null
@@ -2156,6 +2214,67 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          billing_account_id: string
+          consent_at: string | null
+          consent_by: string | null
+          created_at: string
+          id: string
+          id_tag_id: string | null
+          label: string | null
+          plate: string
+          tenant_id: string
+          vin: string | null
+        }
+        Insert: {
+          billing_account_id: string
+          consent_at?: string | null
+          consent_by?: string | null
+          created_at?: string
+          id?: string
+          id_tag_id?: string | null
+          label?: string | null
+          plate: string
+          tenant_id: string
+          vin?: string | null
+        }
+        Update: {
+          billing_account_id?: string
+          consent_at?: string | null
+          consent_by?: string | null
+          created_at?: string
+          id?: string
+          id_tag_id?: string | null
+          label?: string | null
+          plate?: string
+          tenant_id?: string
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_billing_account_id_fkey"
+            columns: ["billing_account_id"]
+            isOneToOne: false
+            referencedRelation: "billing_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_id_tag_id_fkey"
+            columns: ["id_tag_id"]
+            isOneToOne: false
+            referencedRelation: "id_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_deliveries: {
         Row: {
           attempts: number
@@ -2265,6 +2384,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_add_driver: {
+        Args: {
+          p_billing_account_id?: string
+          p_contact: string
+          p_driver_group_id?: string
+        }
+        Returns: string
+      }
+      admin_find_driver: {
+        Args: { p_contact: string }
+        Returns: {
+          display_name: string
+          email: string
+          phone: string
+          user_id: string
+        }[]
+      }
+      admin_list_drivers: {
+        Args: never
+        Returns: {
+          billing_account_id: string
+          display_name: string
+          email: string
+          group_ids: string[]
+          phone: string
+          tags: Json
+          user_id: string
+        }[]
+      }
       buyer_snapshot: { Args: { p_account: string }; Returns: Json }
       charge_point_uptime: {
         Args: { p_window?: string }
@@ -2308,6 +2456,10 @@ export type Database = {
           tariff_text: string
           tenant_id: string
         }[]
+      }
+      driver_on_whitelist: {
+        Args: { p_location: string; p_user: string }
+        Returns: boolean
       }
       driver_site_context: { Args: { p_location_id: string }; Returns: Json }
       driver_start_session: {
