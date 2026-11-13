@@ -2186,6 +2186,7 @@ export type Database = {
       }
       tenants: {
         Row: {
+          country: string
           created_at: string
           id: string
           is_first_party: boolean
@@ -2195,6 +2196,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          country?: string
           created_at?: string
           id?: string
           is_first_party?: boolean
@@ -2204,6 +2206,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          country?: string
           created_at?: string
           id?: string
           is_first_party?: boolean

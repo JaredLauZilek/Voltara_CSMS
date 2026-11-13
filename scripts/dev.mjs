@@ -179,7 +179,7 @@ async function demoFleet() {
       'sh',
       [
         '-c',
-        'cat supabase/dev/demo-fleet.sql supabase/dev/demo-history.sql supabase/dev/demo-charging.sql | docker exec -i supabase_db_Voltara_CSMS psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q',
+        'cat supabase/dev/demo-fleet.sql supabase/dev/demo-history.sql supabase/dev/demo-charging.sql supabase/dev/demo-accounts.sql | docker exec -i supabase_db_Voltara_CSMS psql -U postgres -d postgres -v ON_ERROR_STOP=1 -q',
       ],
       { cwd: root },
     );

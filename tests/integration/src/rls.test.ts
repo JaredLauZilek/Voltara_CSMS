@@ -8,7 +8,7 @@
 // `request.jwt.claims` — exactly what PostgREST does per request, and what
 // auth.jwt() reads. Every transaction is rolled back, so tests are hermetic.
 
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import postgres from 'postgres';
 
 const DB_URL =
@@ -66,6 +66,19 @@ async function as<T>(persona: Persona, fn: (tx: Tx) => Promise<T>): Promise<T> {
   }
   return result as T;
 }
+
+// The local demo accounts (supabase/dev/demo-accounts.sql) move the seeded
+// user to a second operator and add a second owner. This suite tests the seed
+// as committed, so it puts that fixture back first — like the OCPP scenarios,
+// it leaves demo data to be reloaded afterwards (`pnpm db:reset && pnpm dev`).
+beforeAll(async () => {
+  await sql`update public.memberships set tenant_id = ${TENANT_A} where user_id = ${USER_A}`;
+  await sql`
+    delete from public.memberships
+    where tenant_id = ${TENANT_A} and user_id not in (select id from auth.users where id = ${USER_A})
+      and user_id in (select id from auth.users where email like 'jaredmy@%')
+  `;
+});
 
 afterAll(async () => {
   await sql.end();
@@ -742,7 +755,26 @@ describe('auth hook wiring', () => {
     const claims = row.event.claims.app_metadata;
     expect(claims.tenant_id).toBe(TENANT_A);
     expect(claims.tenant_role).toBe('owner');
+    expect(claims.tenant_country).toBe('MY');
     expect(claims.platform_admin).toBe(true);
+  });
+
+  it("an operator's country cannot be changed after creation, even by the platform", async () => {
+    await expect(
+      sql`update public.tenants set country = 'SG' where id = ${TENANT_A}`,
+    ).rejects.toThrow(/country is fixed/);
+  });
+
+  it("a site always takes its operator's country", async () => {
+    await sql.begin(async (tx) => {
+      const [row] = await tx`
+        insert into public.locations (tenant_id, name, country, site_type)
+        values (${TENANT_A}, 'Country check', 'SG', 'public')
+        returning country
+      `;
+      expect(row.country).toBe('MY');
+      await tx`delete from public.locations where name = 'Country check'`;
+    });
   });
 
   it('injects nothing for an unknown user', async () => {

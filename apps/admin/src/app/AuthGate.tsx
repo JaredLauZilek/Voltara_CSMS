@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { AuthError, Session } from '@supabase/supabase-js';
+import { countryProfile, setDisplayCountry } from '@voltara/shared';
 import { C, VoltaraLogo } from '@voltara/ui';
 import { supabase } from '@/shared/lib/supabase';
 import { decodeClaims } from '@/shared/lib/claims';
 import { AuthContext } from './auth';
+import { currentDevAccount } from './devAccounts';
 import { LoginScreen } from './LoginScreen';
 
 interface Props {
@@ -12,7 +14,8 @@ interface Props {
 
 /**
  * Dev-only auto sign-in. Set VITE_DEV_AUTO_LOGIN_EMAIL / _PASSWORD in
- * `.env.local` (gitignored) and the login screen is never rendered: the app
+ * `.env.local` (gitignored; a second account via `_2` — see devAccounts.ts)
+ * and the login screen is never rendered: the app
  * signs in by itself and, if the local stack is down, waits for it and
  * retries. Double-gated: the variables only exist locally, AND
  * `import.meta.env.DEV` is false in every production bundle, so this can
@@ -20,15 +23,7 @@ interface Props {
  * tenant claims hook are exercised exactly as they are for a human at the
  * form. The login screen is production behaviour only until launch.
  */
-const DEV_AUTO_LOGIN =
-  import.meta.env.DEV &&
-  import.meta.env.VITE_DEV_AUTO_LOGIN_EMAIL &&
-  import.meta.env.VITE_DEV_AUTO_LOGIN_PASSWORD
-    ? {
-        email: import.meta.env.VITE_DEV_AUTO_LOGIN_EMAIL as string,
-        password: import.meta.env.VITE_DEV_AUTO_LOGIN_PASSWORD as string,
-      }
-    : null;
+const DEV_AUTO_LOGIN = currentDevAccount();
 
 const DEV_RETRY_MS = 3_000;
 
@@ -60,7 +55,9 @@ export function AuthGate({ children }: Props) {
     const devSignIn = async () => {
       if (!DEV_AUTO_LOGIN || attempting || cancelled) return;
       attempting = true;
-      const { data, error } = await supabase.auth.signInWithPassword(DEV_AUTO_LOGIN);
+      const { data, error } = await supabase.auth.signInWithPassword(
+        currentDevAccount() ?? DEV_AUTO_LOGIN,
+      );
       attempting = false;
       if (cancelled) return;
       if (error || !data.session) {
@@ -160,6 +157,10 @@ export function AuthGate({ children }: Props) {
     );
   }
 
+  // One operator, one country: every amount on screen is in its currency.
+  const country = countryProfile(claims.tenant_country);
+  setDisplayCountry(country.code);
+
   return (
     <AuthContext.Provider
       value={{
@@ -167,6 +168,7 @@ export function AuthGate({ children }: Props) {
         tenantId: claims.tenant_id,
         tenantRole: claims.tenant_role,
         isPlatformAdmin: claims.platform_admin ?? false,
+        country,
       }}
     >
       {children}

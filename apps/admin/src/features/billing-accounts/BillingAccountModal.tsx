@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CompanyCharging } from './CompanyCharging';
 import { C, Modal } from '@voltara/ui';
 import { billing, formatDate } from '@voltara/shared';
+import { useAuth } from '@/app/auth';
 import { useLocations } from '@/features/locations';
 import {
   useAgreements,
@@ -57,6 +58,7 @@ export function BillingAccountModal({
 }) {
   const isNew = !account;
   const { data: locations = [] } = useLocations();
+  const { country } = useAuth();
   const createMut = useCreateAccount();
   const updateMut = useUpdateAccount();
   const deleteMut = useDeleteAccount();
@@ -204,7 +206,7 @@ export function BillingAccountModal({
         </div>
         <div>
           <label style={labelStyle}>Phone</label>
-          {text('phone', '+60…')}
+          {text('phone', country.phonePlaceholder)}
         </div>
         {form.kind === 'site_host' && (
           <div style={{ gridColumn: '1/-1' }}>
@@ -236,22 +238,24 @@ export function BillingAccountModal({
                 marginTop: 6,
               }}
             >
-              Invoice identity (MyInvois)
+              Invoice identity ({country.eInvoiceScheme})
             </div>
             <div>
               <label style={labelStyle}>Legal name</label>
-              {text('legal_name')}
+              {text('legal_name', country.legalNamePlaceholder)}
             </div>
             <div>
-              <label style={labelStyle}>Business registration no.</label>
-              {text('business_registration_no', 'SSM')}
+              <label style={labelStyle}>{country.businessRegistration.label}</label>
+              {text('business_registration_no', country.businessRegistration.placeholder)}
             </div>
+            {country.taxIdentification && (
+              <div>
+                <label style={labelStyle}>{country.taxIdentification.label}</label>
+                {text('tax_identification_no', country.taxIdentification.placeholder)}
+              </div>
+            )}
             <div>
-              <label style={labelStyle}>Tax identification no. (TIN)</label>
-              {text('tax_identification_no')}
-            </div>
-            <div>
-              <label style={labelStyle}>SST registration no.</label>
+              <label style={labelStyle}>{country.salesTaxRegistration.label}</label>
               {text('sst_registration_no')}
             </div>
             <div style={{ gridColumn: '1/-1' }}>

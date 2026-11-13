@@ -6,6 +6,7 @@ import { C, NavItem, VoltaraLogo, useViewport } from '@voltara/ui';
 import { supabase } from '@/shared/lib/supabase';
 import { TenantRealtimeProvider, useRealtimeStatus } from '@/shared/realtime';
 import { useAuth } from './auth';
+import { DEV_ACCOUNTS, switchDevAccount } from './devAccounts';
 import { HOME_PATH, NAV_SECTIONS, ROUTES, titleFor } from './routes';
 
 const COLLAPSED_KEY = 'voltara-csms.nav.collapsed';
@@ -72,7 +73,7 @@ function LiveDot() {
 }
 
 function Shell() {
-  const { session } = useAuth();
+  const { session, country } = useAuth();
   const { data: tenant } = useTenant();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -256,6 +257,32 @@ function Shell() {
           })}
         </nav>
 
+        {DEV_ACCOUNTS.filter((a) => a.email !== email).map((a) => (
+          <button
+            key={a.email}
+            onClick={() => void switchDevAccount(a.email)}
+            title="Dev only: sign in as the other operator account"
+            style={{
+              margin: '0 8px 8px',
+              padding: '7px 10px',
+              borderRadius: 8,
+              border: `1px dashed ${C.border}`,
+              background: 'transparent',
+              color: C.slate,
+              fontFamily: 'Figtree',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              textAlign: 'left',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Switch to {a.email}
+          </button>
+        ))}
+
         <div
           style={{
             borderTop: `1px solid ${C.divider}`,
@@ -305,7 +332,7 @@ function Shell() {
                 whiteSpace: 'nowrap',
               }}
             >
-              {tenant?.name ?? '…'}
+              {tenant?.name ?? '…'} · {country.name}
             </div>
           </div>
           <button

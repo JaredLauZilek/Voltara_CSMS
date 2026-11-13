@@ -41,7 +41,7 @@ const EMPTY: OperatorForm = {
  * time (seller_snapshot), so editing here changes future documents only.
  */
 export function OperatorSettingsScreen() {
-  const { tenantRole } = useAuth();
+  const { tenantRole, country } = useAuth();
   const { data: settings, isLoading } = useOperatorSettings();
   const save = useSaveOperatorSettings();
   const [form, setForm] = useState<OperatorForm>(EMPTY);
@@ -109,20 +109,32 @@ export function OperatorSettingsScreen() {
           </div>
           <div style={{ fontSize: 13, color: C.slate, marginTop: 4, lineHeight: 1.6 }}>
             Printed as the seller on receipts, invoices and settlement statements, and required for
-            LHDN e-invoicing. Changes apply to documents issued from now on.
+            e-invoicing ({country.eInvoiceScheme}). Changes apply to documents issued from now on.
+            <br />
+            Country: <strong style={{ color: C.ink }}>{country.name}</strong> · {country.currency} —
+            set when the operator account was created and cannot be changed.
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {field('app_name', 'Trading name', 'e.g. Voltara Charge')}
-          {field('legal_name', 'Legal name', 'e.g. Voltara Sdn. Bhd.')}
+          {field('legal_name', 'Legal name', country.legalNamePlaceholder)}
           {field(
             'business_registration_no',
-            'Business registration no. (SSM)',
-            '202001012345 (1234567-X)',
+            country.businessRegistration.label,
+            country.businessRegistration.placeholder,
           )}
-          {field('tax_identification_no', 'Tax identification no. (TIN)', 'C12345678900')}
-          {field('sst_registration_no', 'SST registration no.', 'Leave empty until registered')}
-          {field('support_phone', 'Support phone', '+60 …')}
+          {country.taxIdentification &&
+            field(
+              'tax_identification_no',
+              country.taxIdentification.label,
+              country.taxIdentification.placeholder,
+            )}
+          {field(
+            'sst_registration_no',
+            country.salesTaxRegistration.label,
+            country.salesTaxRegistration.placeholder,
+          )}
+          {field('support_phone', 'Support phone', country.phonePlaceholder)}
           {field('support_email', 'Support email', 'billing@…', true)}
           <div style={{ gridColumn: '1/-1' }}>
             <label style={labelStyle}>Registered address</label>
