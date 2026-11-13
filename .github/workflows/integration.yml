@@ -35,7 +35,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned to the repo's own CLI (package.json). v3 made `db push` target the
+          # local stack unless told --remote; upgrade deliberately, not via `latest`.
+          version: 2.109.1
 
       # Boots the local stack and applies all migrations + seed.
       - run: supabase start
