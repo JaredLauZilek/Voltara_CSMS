@@ -372,7 +372,9 @@ export function ChargePointDetailScreen() {
         </>
       )}
 
-      {tab === 'sessions' && <ChargePointSessions chargePointId={cp.id} />}
+      {tab === 'sessions' && (
+        <ChargePointSessions chargePointId={cp.id} chargePointIdentity={cp.ocpp_identity} />
+      )}
 
       {tab === 'config' && <ConfigViewer cp={cp} />}
 

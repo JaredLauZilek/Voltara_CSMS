@@ -291,6 +291,44 @@ describe('sessions report (admin_list_sessions)', () => {
     });
   });
 
+  it('refuses more than 45 days in one request', async () => {
+    await expect(
+      as(
+        personaA('operator'),
+        (tx) => tx`
+          select * from public.admin_list_sessions(null, null, now() - interval '180 days', now())
+        `,
+      ),
+    ).rejects.toThrow(/45 days or less/);
+    // Exactly 45 days is allowed.
+    const rows = await as(
+      personaA('operator'),
+      (tx) => tx`
+        select * from public.admin_list_sessions(null, null, now() - interval '45 days', now())
+      `,
+    );
+    expect(Array.isArray(rows)).toBe(true);
+  });
+
+  it('returns only the most recent 45 days when no dates are given', async () => {
+    await sql`
+      insert into public.charging_sessions
+        (tenant_id, charge_point_id, ocpp_connector_id, ocpp_transaction_id, status, started_at,
+         ended_at)
+      values (${TENANT_A}, ${CP_A}, 1, 987002, 'completed', now() - interval '90 days',
+              now() - interval '90 days' + interval '1 hour')
+    `;
+    try {
+      const rows = await as(
+        personaA('operator'),
+        (tx) => tx`select id from public.admin_list_sessions() where ocpp_transaction_id = 987002`,
+      );
+      expect(rows.length).toBe(0);
+    } finally {
+      await sql`delete from public.charging_sessions where ocpp_transaction_id = 987002`;
+    }
+  });
+
   it('is closed to anonymous callers', async () => {
     await expect(
       as({ role: 'anon' }, (tx) => tx`select * from public.admin_list_sessions()`),

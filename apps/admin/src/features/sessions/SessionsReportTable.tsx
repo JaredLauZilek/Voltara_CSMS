@@ -45,11 +45,17 @@ const right: React.CSSProperties = {
 export function SessionsReportTable({
   sessions,
   isLoading,
+  showCharger = true,
+  emptyText = 'No sessions found.',
 }: {
   sessions: SessionReportRow[];
   isLoading?: boolean;
+  /** Off on a charger's own page, where the site and charger are already known. */
+  showCharger?: boolean;
+  emptyText?: string;
 }) {
   const navigate = useNavigate();
+  const headers = showCharger ? HEADERS : HEADERS.filter((h) => h !== 'Site' && h !== 'Charger');
 
   return (
     <div
@@ -64,7 +70,7 @@ export function SessionsReportTable({
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: C.seasalt }}>
-              {HEADERS.map((h) => (
+              {headers.map((h) => (
                 <th
                   key={h}
                   style={{
@@ -119,13 +125,17 @@ export function SessionsReportTable({
                       </span>
                     )}
                   </td>
-                  <td style={cell}>
-                    {s.location_name ?? '—'}
-                    {s.parking_lot && <div style={{ fontSize: 11 }}>Lot {s.parking_lot}</div>}
-                  </td>
-                  <td style={{ ...cell, fontWeight: 600, color: C.ink }}>
-                    {s.charge_point_identity}
-                  </td>
+                  {showCharger && (
+                    <>
+                      <td style={cell}>
+                        {s.location_name ?? '—'}
+                        {s.parking_lot && <div style={{ fontSize: 11 }}>Lot {s.parking_lot}</div>}
+                      </td>
+                      <td style={{ ...cell, fontWeight: 600, color: C.ink }}>
+                        {s.charge_point_identity}
+                      </td>
+                    </>
+                  )}
                   <td style={cell}>{s.ocpp_connector_id ? gunLetter(s.ocpp_connector_id) : '—'}</td>
                   <td style={cell}>
                     {type ?? '—'}
@@ -205,7 +215,7 @@ export function SessionsReportTable({
       </div>
       {!isLoading && sessions.length === 0 && (
         <div style={{ padding: 32, textAlign: 'center', color: C.slate, fontSize: 14 }}>
-          No sessions found.
+          {emptyText}
         </div>
       )}
     </div>
