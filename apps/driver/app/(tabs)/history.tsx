@@ -1,3 +1,4 @@
+import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { billing, formatDateTime, formatDuration, formatKwh } from '@voltara/shared';
@@ -6,13 +7,14 @@ import { C } from '@/lib/theme';
 import { Badge, Body, Empty, Screen } from '@/lib/ui';
 
 export default function History() {
+  const tabBarSpace = useTabBarSpace();
   const { data = [], isLoading, refetch, isRefetching } = useSessions();
   return (
     <Screen>
       <FlatList
         data={data}
         keyExtractor={(s) => s.id}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: tabBarSpace, gap: 10 }}
         onRefresh={refetch}
         refreshing={isRefetching}
         ListEmptyComponent={!isLoading ? <Empty>No sessions yet.</Empty> : null}

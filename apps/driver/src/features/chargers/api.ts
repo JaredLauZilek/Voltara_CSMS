@@ -48,6 +48,45 @@ export async function nearbyChargers(
   }));
 }
 
+/**
+ * PostgREST's "no such function": the app is talking to a backend that has not
+ * had the lookup migration applied yet. The discovery list answers instead.
+ */
+const isMissingFunction = (e: { code?: string }) => e.code === 'PGRST202';
+
+type ChargerRow = Omit<NearbyCharger, 'connectors'> & { connectors: unknown };
+const toCharger = (r: ChargerRow): NearbyCharger => ({
+  ...r,
+  connectors: (r.connectors as ConnectorInfo[]) ?? [],
+});
+
+/** One charger by id — works wherever the driver is, unlike the nearby list. */
+export async function getCharger(chargePointId: string): Promise<NearbyCharger | null> {
+  const { data, error } = await supabase.rpc('driver_get_charger', {
+    p_charge_point_id: chargePointId,
+  });
+  if (error) {
+    if (!isMissingFunction(error)) throw error;
+    return (
+      (await nearbyChargers(null, null)).find((c) => c.charge_point_id === chargePointId) ?? null
+    );
+  }
+  const row = (data ?? [])[0];
+  return row ? toCharger(row as ChargerRow) : null;
+}
+
+/** The charger a scanned (or typed) charge point ID belongs to; null if there is none. */
+export async function findChargerByCode(code: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc('driver_find_charger_by_code', { p_code: code });
+  if (error) {
+    if (!isMissingFunction(error)) throw error;
+    const wanted = code.trim().toUpperCase();
+    const all = await nearbyChargers(null, null);
+    return all.find((c) => c.charge_point_name.toUpperCase() === wanted)?.charge_point_id ?? null;
+  }
+  return (data as string | null) ?? null;
+}
+
 export interface SiteContext {
   location_id: string;
   tenant_id: string;

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Badge, C, Modal } from '@voltara/ui';
 import { formatDateTime, formatDuration, formatGun, formatKwh } from '@voltara/shared';
 import { useAuth } from '@/app/auth';
-import { useIdTags } from '@/features/id-tags';
+import { driverName, useDrivers } from '@/features/drivers';
+import { useCreateIdTag, useIdTags } from '@/features/id-tags';
 import { useOpenSessions } from '@/features/sessions';
 import { useRemoteOps } from './hooks';
 import { COMMAND_STATUS_LABELS, REMOTE_OP_LABELS } from './types';
@@ -13,6 +14,11 @@ import type {
   RemoteCommandActionUi,
   RemoteOpInput,
 } from './types';
+
+/** "Charge as" choice for a start with no driver behind it. */
+const OPERATOR = 'operator';
+/** The ID tag an operator start travels under (OCPP idTag, 20 characters max). */
+const OPERATOR_TAG = 'OPERATOR';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -225,11 +231,16 @@ function RemoteOpModal({
   onClose: () => void;
   onConfirm: (op: RemoteOpInput) => void;
 }) {
+  const { tenantId } = useAuth();
   const { data: idTags = [] } = useIdTags();
+  const { data: drivers = [] } = useDrivers();
+  const createTag = useCreateIdTag();
   const { data: openSessions = [], isLoading: loadingSessions } = useOpenSessions(cp.id);
   const firstConnector = cp.connectors[0]?.ocpp_connector_id ?? 1;
   const [connectorId, setConnectorId] = useState<number>(firstConnector);
-  const [idTag, setIdTag] = useState<string>('');
+  // Who the session is for: the operator (a test start, no driver) or one of
+  // the operator's drivers, by their app account.
+  const [chargeAs, setChargeAs] = useState<string>(OPERATOR);
   const [transactionId, setTransactionId] = useState<string>('');
   const [manualTransaction, setManualTransaction] = useState(false);
   const [resetType, setResetType] = useState<'Soft' | 'Hard'>('Soft');
@@ -237,7 +248,19 @@ function RemoteOpModal({
   const [wholeCharger, setWholeCharger] = useState(false);
   const [trigger, setTrigger] = useState('StatusNotification');
 
-  const activeTags = idTags.filter((t) => t.status === 'active');
+  // A driver is started on their app tag, so the session is billed exactly as
+  // if they had started it from the app (company, whitelist, discount).
+  const startable = drivers
+    .map((d) => ({
+      driver: d,
+      tag: d.tags.find((t) => t.kind === 'virtual' && t.status === 'active')?.tag ?? null,
+    }))
+    .filter((d): d is { driver: (typeof drivers)[number]; tag: string } => d.tag !== null);
+  const operatorTag = idTags.find((t) => t.tag === OPERATOR_TAG);
+  const idTag =
+    chargeAs === OPERATOR
+      ? OPERATOR_TAG
+      : (startable.find((d) => d.driver.user_id === chargeAs)?.tag ?? '');
   // One running session is the common case: pick it for the operator.
   const stopTransaction =
     transactionId ||
@@ -282,11 +305,31 @@ function RemoteOpModal({
   };
 
   const op = build();
-  const canSend = Boolean(op) && !isSending;
+  const canSend = Boolean(op) && !isSending && !createTag.isPending;
+
+  // The operator's own tag is created the first time it is needed; the
+  // charger sends the tag back at StartTransaction and it must exist by then.
+  const send = async () => {
+    if (!op) return;
+    if (action === 'RemoteStartTransaction' && chargeAs === OPERATOR) {
+      if (!operatorTag) {
+        await createTag.mutateAsync({
+          tenant_id: tenantId,
+          tag: OPERATOR_TAG,
+          kind: 'virtual',
+          status: 'active',
+          label: 'Operator start (admin)',
+        });
+      } else if (operatorTag.status !== 'active') {
+        return;
+      }
+    }
+    onConfirm(op);
+  };
 
   const explain: Record<RemoteCommandActionUi, string> = {
     RemoteStartTransaction:
-      'Starts charging on the chosen gun as if the tag had been presented. The car must already be plugged in.',
+      'Starts charging on the chosen gun. The car must already be plugged in.',
     RemoteStopTransaction:
       'Stops the running transaction. The gun goes to Finishing until the cable is removed.',
     Reset:
@@ -337,17 +380,34 @@ function RemoteOpModal({
         {action === 'RemoteStartTransaction' && (
           <div>
             <label style={labelStyle}>Charge as</label>
-            <select value={idTag} onChange={(e) => setIdTag(e.target.value)} style={inputStyle}>
-              <option value="">— Choose an ID tag —</option>
-              {activeTags.map((t) => (
-                <option key={t.id} value={t.tag}>
-                  {t.label ? `${t.label} · ${t.tag}` : t.tag}
+            <select
+              value={chargeAs}
+              onChange={(e) => setChargeAs(e.target.value)}
+              style={inputStyle}
+            >
+              <option value={OPERATOR}>Operator test start · no driver</option>
+              {startable.map(({ driver }) => (
+                <option key={driver.user_id} value={driver.user_id}>
+                  {driverName(driver)}
+                  {driver.display_name && driver.email ? ` · ${driver.email}` : ''}
                 </option>
               ))}
             </select>
-            {activeTags.length === 0 && (
-              <div style={{ fontSize: 11, color: C.slate, marginTop: 4 }}>
-                No active ID tags yet. Add a card to a driver under Charging management first.
+          </div>
+        )}
+        {action === 'RemoteStartTransaction' && (
+          <div style={{ gridColumn: '1/-1', fontSize: 11, color: C.slate, lineHeight: 1.5 }}>
+            {chargeAs === OPERATOR
+              ? 'Recorded as started by the operator, with no driver, at the normal tariff. Refused at a private site, where only whitelisted drivers may charge.'
+              : 'Billed exactly as if this driver had started it in the app: their company, whitelist and discount apply.'}
+            {chargeAs === OPERATOR && operatorTag && operatorTag.status !== 'active' && (
+              <div style={{ color: C.error, marginTop: 4 }}>
+                The operator tag ({OPERATOR_TAG}) is blocked. Unblock it to use operator starts.
+              </div>
+            )}
+            {createTag.error && (
+              <div style={{ color: C.error, marginTop: 4 }}>
+                Could not prepare the operator tag: {(createTag.error as Error).message}
               </div>
             )}
           </div>
@@ -537,7 +597,7 @@ function RemoteOpModal({
           Cancel
         </button>
         <button
-          onClick={() => op && onConfirm(op)}
+          onClick={() => void send()}
           disabled={!canSend}
           style={{
             padding: '10px 24px',
@@ -552,7 +612,9 @@ function RemoteOpModal({
             opacity: canSend ? 1 : 0.6,
           }}
         >
-          {isSending ? 'Sending…' : `Send ${REMOTE_OP_LABELS[action].toLowerCase()}`}
+          {isSending || createTag.isPending
+            ? 'Sending…'
+            : `Send ${REMOTE_OP_LABELS[action].toLowerCase()}`}
         </button>
       </div>
     </Modal>

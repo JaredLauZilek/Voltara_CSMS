@@ -291,6 +291,44 @@ describe('sessions report (admin_list_sessions)', () => {
     });
   });
 
+  it('refuses more than 45 days in one request', async () => {
+    await expect(
+      as(
+        personaA('operator'),
+        (tx) => tx`
+          select * from public.admin_list_sessions(null, null, now() - interval '180 days', now())
+        `,
+      ),
+    ).rejects.toThrow(/45 days or less/);
+    // Exactly 45 days is allowed.
+    const rows = await as(
+      personaA('operator'),
+      (tx) => tx`
+        select * from public.admin_list_sessions(null, null, now() - interval '45 days', now())
+      `,
+    );
+    expect(Array.isArray(rows)).toBe(true);
+  });
+
+  it('returns only the most recent 45 days when no dates are given', async () => {
+    await sql`
+      insert into public.charging_sessions
+        (tenant_id, charge_point_id, ocpp_connector_id, ocpp_transaction_id, status, started_at,
+         ended_at)
+      values (${TENANT_A}, ${CP_A}, 1, 987002, 'completed', now() - interval '90 days',
+              now() - interval '90 days' + interval '1 hour')
+    `;
+    try {
+      const rows = await as(
+        personaA('operator'),
+        (tx) => tx`select id from public.admin_list_sessions() where ocpp_transaction_id = 987002`,
+      );
+      expect(rows.length).toBe(0);
+    } finally {
+      await sql`delete from public.charging_sessions where ocpp_transaction_id = 987002`;
+    }
+  });
+
   it('is closed to anonymous callers', async () => {
     await expect(
       as({ role: 'anon' }, (tx) => tx`select * from public.admin_list_sessions()`),
@@ -729,6 +767,30 @@ describe('driver access (Phase 4)', () => {
     expect(r.chargers.length).toBeGreaterThan(0);
     expect(r.chargers[0].tariff_text).toBeTruthy();
     expect(Object.keys(r.chargers[0])).not.toContain('auth_key_hash');
+  });
+
+  it('opens one charger by id or by its scanned code, and never a private one', async () => {
+    await as(driver, async (tx) => {
+      await seedDriverUser(tx);
+      const [one] = await tx`select * from public.driver_get_charger(${CP_A}::uuid)`;
+      expect(one.charge_point_name).toBe('VCP-DEMO-001');
+      expect(Object.keys(one)).not.toContain('auth_key_hash');
+      // Codes are matched without regard to case or stray spaces.
+      const [{ id }] = await tx`select public.driver_find_charger_by_code(' vcp-demo-001 ') as id`;
+      expect(id).toBe(CP_A);
+      const [{ id: none }] =
+        await tx`select public.driver_find_charger_by_code('NO-SUCH-CP') as id`;
+      expect(none).toBeNull();
+
+      // The site goes private: a driver who is not whitelisted finds nothing.
+      await tx.unsafe('set local role postgres');
+      await tx`update public.locations set is_private = true where id = ${LOC_A}`;
+      await tx.unsafe('set local role authenticated');
+      expect(await tx`select 1 from public.driver_get_charger(${CP_A}::uuid)`).toHaveLength(0);
+      const [{ id: hidden }] =
+        await tx`select public.driver_find_charger_by_code('VCP-DEMO-001') as id`;
+      expect(hidden).toBeNull();
+    });
   });
 
   it('cannot start on a paid charger without joining; can after redeeming a code; then owns the session', async () => {

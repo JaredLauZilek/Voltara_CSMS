@@ -18,7 +18,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Voltara shows chargers near you.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Voltara uses the camera to scan the QR code on a charger."
       }
     },
     "android": {
@@ -27,18 +28,37 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1B512D"
       },
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA"]
     },
-    "web": { "bundler": "metro", "output": "single" },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      ["expo-location", { "locationWhenInUsePermission": "Voltara shows chargers near you." }]
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Voltara shows chargers near you."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Voltara uses the camera to scan the QR code on a charger.",
+          "recordAudioAndroid": false
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": true },
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
-      "eas": { "projectId": "" }
+      "eas": {
+        "projectId": ""
+      }
     }
   }
 }

@@ -1,3 +1,4 @@
+import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { useEffect, useState } from 'react';
 import { ScrollView, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
@@ -17,6 +18,7 @@ const input = {
 } as const;
 
 export default function Profile() {
+  const tabBarSpace = useTabBarSpace();
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const { data: tags = [] } = useMyTags();
@@ -32,7 +34,7 @@ export default function Profile() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarSpace, gap: 14 }}>
         <Card style={{ gap: 10 }}>
           <Label>Account</Label>
           <Body>{session?.user.email}</Body>

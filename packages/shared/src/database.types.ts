@@ -2484,6 +2484,28 @@ export type Database = {
       create_receipt: { Args: { p_cdr_id: string }; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       driver_ensure_tag: { Args: { p_tenant: string }; Returns: string }
+      driver_find_charger_by_code: { Args: { p_code: string }; Returns: string }
+      driver_get_charger: {
+        Args: { p_charge_point_id: string }
+        Returns: {
+          address: string
+          charge_point_id: string
+          charge_point_name: string
+          city: string
+          connection_state: string
+          connectors: Json
+          distance_km: number
+          is_free: boolean
+          lat: number
+          lng: number
+          location_id: string
+          operator_name: string
+          site_name: string
+          site_type: string
+          tariff_text: string
+          tenant_id: string
+        }[]
+      }
       driver_join_site: { Args: { p_code: string }; Returns: Json }
       driver_nearby_chargers: {
         Args: {
