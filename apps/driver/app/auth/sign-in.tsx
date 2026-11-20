@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import * as Linking from 'expo-linking';
@@ -94,7 +95,7 @@ export default function SignIn() {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ fontSize: 28, color: C.yellow }}>⚡</Text>
+              <Ionicons name="flash" size={28} color={C.yellow} />
             </View>
             <Title>Voltara</Title>
             <Body muted>Charge, pay and go.</Body>

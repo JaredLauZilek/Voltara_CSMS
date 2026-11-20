@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ChargerQrCodes } from './ChargerQrCodes';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge, C, ChargerIcon } from '@voltara/ui';
 import { formatDateTime, formatGun } from '@voltara/shared';
@@ -317,6 +318,15 @@ export function ChargePointDetailScreen() {
                   : 'The password is stored only as a hash and cannot be shown again. If it is lost, delete this charger and register it again.'}
               </div>
             </div>
+          </div>
+
+          <div style={card}>
+            <div style={sectionTitle}>QR codes for drivers</div>
+            <div style={{ fontSize: 12, color: C.slate, lineHeight: 1.6, marginTop: -4 }}>
+              Print one beside each gun. A driver scans it in the Voltara app to open this charger,
+              ready to start. The charger ID is also printed under it for typing in by hand.
+            </div>
+            <ChargerQrCodes cp={cp} />
           </div>
 
           {activeIssues.length > 0 && (

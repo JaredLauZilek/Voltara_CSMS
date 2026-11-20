@@ -36,6 +36,16 @@ export function useNearbyChargers(coords: { lat: number; lng: number } | null | 
   });
 }
 
+/** One charger, refreshed often enough that gun statuses stay honest. */
+export function useCharger(chargePointId: string | undefined) {
+  return useQuery({
+    queryKey: ['chargers', 'one', chargePointId],
+    queryFn: () => api.getCharger(chargePointId!),
+    enabled: Boolean(chargePointId),
+    refetchInterval: 10_000,
+  });
+}
+
 export function useSiteContext(locationId: string | null) {
   return useQuery({
     queryKey: ['site', locationId],

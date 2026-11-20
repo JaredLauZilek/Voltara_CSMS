@@ -2,33 +2,28 @@ import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { formatGun } from '@voltara/shared';
-import {
-  useCoords,
-  useNearbyChargers,
-  useSiteContext,
-  useStartSession,
-} from '@/features/chargers/hooks';
+import { Ionicons } from '@expo/vector-icons';
+import { useCharger, useSiteContext, useStartSession } from '@/features/chargers/hooks';
 import { useActiveSession } from '@/features/sessions/hooks';
 import { C, STATUS, ThemeContext, mergeTheme } from '@/lib/theme';
 import { Badge, Body, Button, Card, Label, Screen, Title } from '@/lib/ui';
 
 /** One charger: its connectors, the price you would pay, and Start. Branded by the site's operator. */
 export default function Charger() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const coords = useCoords();
-  const { data: chargers = [] } = useNearbyChargers(coords);
-  const cp = chargers.find((r) => r.charge_point_id === id);
+  // `gun` comes from a scanned sticker that names one gun of a twin charger.
+  const { id, gun } = useLocalSearchParams<{ id: string; gun?: string }>();
+  const { data: cp, isLoading } = useCharger(id);
   const { data: site } = useSiteContext(cp?.location_id ?? null);
   const { data: active } = useActiveSession();
   const start = useStartSession();
-  const [connector, setConnector] = useState<number | null>(null);
+  const [connector, setConnector] = useState<number | null>(gun ? Number(gun) || null : null);
   const theme = useMemo(() => mergeTheme(site?.theme), [site?.theme]);
 
   if (!cp)
     return (
       <Screen>
         <Body muted style={{ padding: 24 }}>
-          Loading charger…
+          {isLoading ? 'Loading charger…' : 'This charger is not available.'}
         </Body>
       </Screen>
     );
@@ -96,7 +91,7 @@ export default function Charger() {
                       justifyContent: 'center',
                     }}
                   >
-                    <Text style={{ color: s.color }}>⚡</Text>
+                    <Ionicons name="flash" size={18} color={s.color} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: C.ink }}>
@@ -128,7 +123,7 @@ export default function Charger() {
                 ? 'Your member rate applies if this site gave you one.'
                 : cp.is_free
                   ? 'Free to charge.'
-                  : 'Join this site with its code to charge here. Card payment for visitors arrives in a later release.'}
+                  : 'Your account has not been added to this site yet. Ask the operator to add you, or join with a site code. Card payment for visitors arrives in a later release.'}
             </Body>
           </Card>
 

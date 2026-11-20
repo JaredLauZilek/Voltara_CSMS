@@ -769,6 +769,30 @@ describe('driver access (Phase 4)', () => {
     expect(Object.keys(r.chargers[0])).not.toContain('auth_key_hash');
   });
 
+  it('opens one charger by id or by its scanned code, and never a private one', async () => {
+    await as(driver, async (tx) => {
+      await seedDriverUser(tx);
+      const [one] = await tx`select * from public.driver_get_charger(${CP_A}::uuid)`;
+      expect(one.charge_point_name).toBe('VCP-DEMO-001');
+      expect(Object.keys(one)).not.toContain('auth_key_hash');
+      // Codes are matched without regard to case or stray spaces.
+      const [{ id }] = await tx`select public.driver_find_charger_by_code(' vcp-demo-001 ') as id`;
+      expect(id).toBe(CP_A);
+      const [{ id: none }] =
+        await tx`select public.driver_find_charger_by_code('NO-SUCH-CP') as id`;
+      expect(none).toBeNull();
+
+      // The site goes private: a driver who is not whitelisted finds nothing.
+      await tx.unsafe('set local role postgres');
+      await tx`update public.locations set is_private = true where id = ${LOC_A}`;
+      await tx.unsafe('set local role authenticated');
+      expect(await tx`select 1 from public.driver_get_charger(${CP_A}::uuid)`).toHaveLength(0);
+      const [{ id: hidden }] =
+        await tx`select public.driver_find_charger_by_code('VCP-DEMO-001') as id`;
+      expect(hidden).toBeNull();
+    });
+  });
+
   it('cannot start on a paid charger without joining; can after redeeming a code; then owns the session', async () => {
     await as(driver, async (tx) => {
       await seedDriverUser(tx);

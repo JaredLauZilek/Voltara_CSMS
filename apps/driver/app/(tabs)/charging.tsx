@@ -1,3 +1,4 @@
+import { useTabBarSpace } from '@/components/FloatingTabBar';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -13,6 +14,7 @@ import { Body, Button, Card, Empty, Label, Screen, Title } from '@/lib/ui';
  * session — so the number here is the number on the receipt.
  */
 export default function Charging() {
+  const tabBarSpace = useTabBarSpace();
   const { data: session, isLoading } = useActiveSession();
   const { data: minutes = [] } = useSessionMinutes(session?.id ?? '', Boolean(session));
   const stop = useStopSession();
@@ -61,7 +63,7 @@ export default function Charging() {
   const ss = Math.floor(elapsedS % 60);
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: tabBarSpace, gap: 14 }}>
         <Card style={{ backgroundColor: C.green, borderColor: C.green, gap: 4 }}>
           <Text
             style={{

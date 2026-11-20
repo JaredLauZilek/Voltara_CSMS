@@ -1,7 +1,16 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-13T12:33:35.307Z",
+  "updatedAt": "2026-11-20T15:16:25.883Z",
   "items": [
+    {
+      "id": "e379d324",
+      "title": "Driver app v1: map and QR scan",
+      "notes": "Built: map home screen (one pin per site with free guns, search, Available-now and DC filters, stations list, directions via Google Maps or Waze), floating tab bar with a centre Scan button, QR scanner with torch and a type-the-ID fallback, and printable QR codes per gun on the admin charger page. To do: try on a real iPhone and Android phone, the other tabs (rewards, account), map pin clustering for dense areas, sign-in without email link, card payments so visitors can start.",
+      "area": "Driver app",
+      "status": "now",
+      "priority": "high",
+      "doneAt": null
+    },
     {
       "id": "5262d3c6",
       "title": "Sessions list: full details, filters and CSV download",

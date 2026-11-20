@@ -7,6 +7,7 @@ export * from './realtime';
 export * from './countries';
 export * from './format';
 export * from './maps';
+export * from './chargerQr';
 export * as ocpp16 from './ocpp/v16';
 export * as billing from './billing';
 export type { Database, Json } from './database.types';

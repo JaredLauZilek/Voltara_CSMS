@@ -23,6 +23,10 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="auth/sign-in" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="scan"
+              options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }}
+            />
             <Stack.Screen name="charger/[id]" options={{ title: 'Charger' }} />
             <Stack.Screen name="session/[id]" options={{ title: 'Session' }} />
             <Stack.Screen name="join" options={{ title: 'Join a site', presentation: 'modal' }} />
