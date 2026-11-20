@@ -1,6 +1,6 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Badge, C, Toolbar } from '@voltara/ui';
+import { Badge, C, Pagination, Toolbar, usePagination } from '@voltara/ui';
 import { formatDateTime, formatDuration, formatKwh, formatRM } from '@voltara/shared';
 import { useSessionDetail, useSessions } from '@/features/sessions';
 import { useChargerLog, type LogRange } from './hooks';
@@ -13,6 +13,9 @@ import {
   type ActivityFilter,
   type Exchange,
 } from './activity';
+
+/** Log entries per page. */
+const LOG_PAGE_SIZE = 25;
 
 const RANGES = {
   '24h': { label: 'Last 24 hours', hours: 24 },
@@ -128,6 +131,15 @@ export function ChargerActivity({ chargePointId }: { chargePointId: string }) {
   );
 
   const sessionMissing = Boolean(sessionId) && !session && !loadingSession;
+
+  // A page at a time, newest first — never one endless list. Changing what is
+  // shown starts again from the first page.
+  const pagination = usePagination(entries, LOG_PAGE_SIZE);
+  const { reset: resetPage, pageItems } = pagination;
+  useEffect(() => {
+    resetPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, sessionId, rangeKey, heartbeats]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -300,9 +312,9 @@ export function ChargerActivity({ chargePointId }: { chargePointId: string }) {
               <span style={{ textAlign: 'right' }}>Reply in</span>
             </div>
 
-            {entries.map((entry, i) => {
+            {pageItems.map((entry, i) => {
               const d = day(entry.at);
-              const newDay = i === 0 || day(entries[i - 1]!.at) !== d;
+              const newDay = i === 0 || day(pageItems[i - 1]!.at) !== d;
               return (
                 <Fragment key={entry.key}>
                   {newDay && (
@@ -343,6 +355,18 @@ export function ChargerActivity({ chargePointId }: { chargePointId: string }) {
             No activity {session ? 'for this session' : 'in this window'}.
             {!heartbeats && ' Heartbeats are hidden.'}
           </div>
+        )}
+        {entries.length > LOG_PAGE_SIZE && (
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            from={pagination.from}
+            to={pagination.to}
+            onPageChange={pagination.setPage}
+            bordered
+          />
         )}
         {log?.framesTruncated && (
           <div
